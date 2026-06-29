@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>그레이스하우스 임대관리</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  primary:"#0058be","on-primary":"#fff","primary-fixed":"#d8e2ff",
+  secondary:"#4f6073","secondary-container":"#d2e4fb","on-secondary-container":"#556679",
+  tertiary:"#4d5d73","error":"#ba1a1a","error-container":"#ffdad6","on-error-container":"#93000a",
+  surface:"#f7f9fb","surface-bright":"#f7f9fb","surface-container":"#eceef0","surface-container-low":"#f2f4f6",
+  "surface-container-lowest":"#fff","surface-container-high":"#e6e8ea","on-surface":"#191c1e",
+  "on-surface-variant":"#424754","outline":"#727785","outline-variant":"#c2c6d6","background":"#f7f9fb",
+}}}}
+</script>
+<style>
+*{font-family:'Inter','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400;vertical-align:middle;}
+.fill{font-variation-settings:'FILL' 1;}
+.page{display:none;} .page.active{display:block;}
+.glass{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border:1px solid rgba(226,232,240,.6);}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-thumb{background:#c2c6d6;border-radius:9px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:10px;cursor:pointer;transition:.15s;font-weight:600;font-size:15px;color:#424754;}
+.nav-item:hover{background:#e6e8ea;} .nav-item.active{background:#d2e4fb;color:#556679;}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
+.btn-p{background:#0058be;color:#fff;padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:none;transition:.15s;}
+.btn-p:hover{opacity:.9;}
+.btn-s{background:#fff;color:#191c1e;padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid #c2c6d6;}
+.btn-s:hover{background:#f2f4f6;}
+.btn-d{background:#ffdad6;color:#93000a;padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:none;}
+.fi{width:100%;padding:9px 12px;border:1px solid #c2c6d6;border-radius:8px;font-size:14px;background:#fff;color:#191c1e;outline:none;}
+.fi:focus{border-color:#0058be;box-shadow:0 0 0 2px rgba(0,88,190,.15);}
+.fl{font-size:12px;font-weight:600;color:#424754;letter-spacing:.03em;margin-bottom:5px;display:block;}
+table{border-collapse:collapse;width:100%;}
+th{font-size:11px;font-weight:600;color:#424754;letter-spacing:.04em;padding:12px 16px;background:#f2f4f6;text-align:left;white-space:nowrap;}
+td{padding:12px 16px;font-size:14px;color:#191c1e;border-top:1px solid #eceef0;}
+tbody tr:hover td{background:#f7f9fb;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.fade{animation:fadeUp .35s ease forwards;}
+.pcell{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;transition:.1s;}
+</style>
+</head>
+<body class="bg-background text-on-surface" style="min-height:100vh;">
+
+<!-- 잠금 화면 -->
+<div id="lock" style="position:fixed;inset:0;z-index:200;background:linear-gradient(135deg,#0058be,#003a7e);display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:18px;padding:32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="width:52px;height:52px;background:#d8e2ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+      <span class="material-symbols-outlined" style="color:#0058be;font-size:28px;">lock</span>
+    </div>
+    <div style="font-size:20px;font-weight:700;">그레이스하우스 임대관리</div>
+    <div style="font-size:13px;color:#424754;margin-top:4px;margin-bottom:20px;">가족 전용 · 비밀번호를 입력하세요.</div>
+    <input id="lock-pw" type="password" placeholder="비밀번호" autocomplete="current-password" style="width:100%;padding:12px 14px;border:1px solid #c2c6d6;border-radius:10px;font-size:15px;outline:none;"/>
+    <div id="lock-err" style="color:#ba1a1a;font-size:13px;margin-top:8px;min-height:18px;"></div>
+    <button id="lock-btn" onclick="doUnlock()" style="width:100%;background:#0058be;color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">열기</button>
+    <div style="font-size:11px;color:#9ca3af;margin-top:14px;text-align:center;">데이터는 암호화되어 저장되며 외부로 전송되지 않습니다.</div>
+  </div>
+</div>
+
+<aside id="sidebar" class="fixed left-0 top-0 h-full flex flex-col p-4 border-r border-outline-variant bg-surface-container-low w-64 z-40 hidden md:flex">
+  <div class="flex items-center gap-3 mb-7 px-2 pt-1">
+    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary"><span class="material-symbols-outlined fill">apartment</span></div>
+    <div>
+      <div style="font-size:15px;font-weight:700;">그레이스하우스</div>
+      <div style="font-size:11px;color:#424754;letter-spacing:.04em;">임대관리 대시보드</div>
+    </div>
+  </div>
+  <nav class="flex-1 space-y-1">
+    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')"><span class="material-symbols-outlined">dashboard</span>대시보드</div>
+    <div class="nav-item" data-page="units" onclick="navigate('units')"><span class="material-symbols-outlined">meeting_room</span>건물 · 호실</div>
+    <div class="nav-item" data-page="payments" onclick="navigate('payments')"><span class="material-symbols-outlined">event_available</span>납부 현황</div>
+    <div class="nav-item" data-page="finance" onclick="navigate('finance')"><span class="material-symbols-outlined">payments</span>재무</div>
+  </nav>
+  <div class="mt-auto pt-4 border-t border-outline-variant">
+    <div class="nav-item" onclick="exportEnc()" style="font-size:13px;"><span class="material-symbols-outlined" style="font-size:18px;">cloud_upload</span>암호화 백업 내보내기</div>
+    <div class="nav-item" onclick="resetData()" style="font-size:13px;"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span>원본 데이터 복원</div>
+    <div style="font-size:11px;color:#727785;padding:8px 16px;line-height:1.5;">편집 내용은 암호화되어 이 브라우저에만 저장됩니다. 다른 기기와 공유하려면 백업을 내보내 GitHub에 다시 올리세요.</div>
+  </div>
+</aside>
+
+<main class="md:ml-64 min-h-screen flex flex-col pb-20 md:pb-0">
+  <header class="sticky top-0 z-30 flex items-center justify-between px-5 md:px-6 h-16 bg-surface-bright border-b border-outline-variant">
+    <div class="flex items-center gap-3">
+      <button class="md:hidden p-2 rounded-lg hover:bg-surface-container" onclick="toggleMenu()"><span class="material-symbols-outlined">menu</span></button>
+      <div id="ptitle" style="font-size:21px;font-weight:700;color:#0058be;">대시보드</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="p-2 rounded-full hover:bg-surface-container text-on-surface-variant relative" onclick="showNotif()">
+        <span class="material-symbols-outlined">notifications</span>
+        <span id="nbadge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+      </button>
+      <button class="btn-p flex items-center gap-1" onclick="openAdd()" style="padding:7px 13px;"><span class="material-symbols-outlined" style="font-size:18px;">add</span><span id="fab">추가</span></button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active p-5 md:p-6 space-y-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpis"></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 glass rounded-xl p-6">
+        <div class="flex justify-between items-center mb-5"><div style="font-size:16px;font-weight:700;">월 임대수입 추이</div><span style="font-size:12px;color:#424754;">최근 8개월</span></div>
+        <div id="rchart" class="h-48 flex items-end gap-2 border-b border-outline-variant px-1"></div>
+        <div id="rlabels" class="flex gap-2 mt-2 px-1"></div>
+      </div>
+      <div class="glass rounded-xl p-6">
+        <div style="font-size:16px;font-weight:700;margin-bottom:14px;">보증보험 가입 현황</div>
+        <div id="insurance-summary"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass rounded-xl overflow-hidden">
+        <div class="p-4 border-b border-outline-variant flex justify-between items-center"><div style="font-size:16px;font-weight:700;">⚠️ 이번 달 미납</div><button class="text-primary text-sm font-semibold" onclick="navigate('payments')">납부관리 →</button></div>
+        <div id="unpaid-list"></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <div class="p-4 border-b border-outline-variant flex justify-between items-center"><div style="font-size:16px;font-weight:700;">📅 계약 만료 임박</div><button class="text-primary text-sm font-semibold" onclick="navigate('units')">전체보기 →</button></div>
+        <div id="expiring-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNITS -->
+  <div id="page-units" class="page p-5 md:p-6 space-y-5">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="units-stats"></div>
+    <div class="flex flex-wrap items-center gap-2">
+      <select id="ufilter-building" class="fi" style="width:auto;" onchange="renderUnits()"><option value="">전체 건물</option></select>
+      <select id="ufilter-type" class="fi" style="width:auto;" onchange="renderUnits()">
+        <option value="">전세/월세 전체</option><option value="전세">전세</option><option value="월세">월세</option><option value="반전세">반전세</option><option value="공실">공실</option>
+      </select>
+      <button class="btn-s flex items-center gap-1" onclick="exportCSV('units')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
+    </div>
+    <div id="units-by-building" class="space-y-6"></div>
+  </div>
+
+  <!-- PAYMENTS -->
+  <div id="page-payments" class="page p-5 md:p-6 space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div style="font-size:14px;color:#424754;">셀을 클릭하면 <b>완납 → 미납 → 해당없음</b> 순으로 전환됩니다. 좌측은 임대료, 우측은 관리비입니다.</div>
+      <select id="pfilter-building" class="fi" style="width:auto;" onchange="renderPayments()"><option value="">전체 건물</option></select>
+    </div>
+    <div class="flex flex-wrap gap-4 text-xs items-center" style="color:#424754;">
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;">○</span>완납</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#ffdad6;color:#b91c1c;">!</span>미납</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#eceef0;color:#9ca3af;">–</span>해당없음(전세 등)</span>
+    </div>
+    <div id="payment-tables" class="space-y-6"></div>
+  </div>
+
+  <!-- FINANCE -->
+  <div id="page-finance" class="page p-5 md:p-6 space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 기간</option></select>
+      <button class="btn-s flex items-center gap-1" onclick="exportCSV('finance')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="fkpis"></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 glass rounded-xl p-6"><div style="font-size:16px;font-weight:700;margin-bottom:16px;">카테고리별 지출</div><div id="fcat"></div></div>
+      <div class="glass rounded-xl p-6"><div style="font-size:16px;font-weight:700;margin-bottom:16px;">월별 손익</div><div id="fmonthly"></div></div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+      <div class="p-4 border-b border-outline-variant bg-surface-container-low" style="font-size:16px;font-weight:700;">거래 내역</div>
+      <div class="overflow-x-auto"><table><thead><tr><th>날짜</th><th>항목</th><th>유형</th><th style="text-align:right;">금액</th><th style="text-align:center;">관리</th></tr></thead><tbody id="ftbody"></tbody></table></div>
+    </div>
+  </div>
+</main>
+
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-bright border-t border-outline-variant flex items-center justify-around z-40">
+  <button onclick="navigate('dashboard')" class="flex flex-col items-center gap-1 text-xs" id="mn-dashboard"><span class="material-symbols-outlined" style="font-size:22px;">dashboard</span>대시보드</button>
+  <button onclick="navigate('units')" class="flex flex-col items-center gap-1 text-xs" id="mn-units"><span class="material-symbols-outlined" style="font-size:22px;">meeting_room</span>호실</button>
+  <button onclick="navigate('payments')" class="flex flex-col items-center gap-1 text-xs" id="mn-payments"><span class="material-symbols-outlined" style="font-size:22px;">event_available</span>납부</button>
+  <button onclick="navigate('finance')" class="flex flex-col items-center gap-1 text-xs" id="mn-finance"><span class="material-symbols-outlined" style="font-size:22px;">payments</span>재무</button>
+</nav>
+
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+    <div class="flex items-center justify-between p-5 border-b border-outline-variant"><div id="mtitle" style="font-size:18px;font-weight:700;"></div><button onclick="closeModal()" class="p-1 rounded-lg hover:bg-surface-container"><span class="material-symbols-outlined">close</span></button></div>
+    <div id="mbody" class="p-5 overflow-y-auto" style="max-height:68vh;"></div>
+    <div class="flex gap-3 p-5 border-t border-outline-variant justify-end">
+      <button class="btn-s" onclick="closeModal()">취소</button>
+      <button id="mdel" class="btn-d hidden" onclick="delItem()">삭제</button>
+      <button class="btn-p" onclick="saveModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="notif" class="hidden fixed top-16 right-4 w-80 bg-white rounded-xl shadow-2xl border border-outline-variant z-50 overflow-hidden">
+  <div class="p-4 border-b border-outline-variant flex justify-between items-center"><div style="font-weight:700;">알림</div><button onclick="document.getElementById('notif').classList.add('hidden')"><span class="material-symbols-outlined" style="font-size:18px;">close</span></button></div>
+  <div id="nlist" class="p-3 space-y-2 max-h-96 overflow-y-auto"></div>
+</div>
+
+<!-- 암호화된 데이터 (setup.html 로 생성) -->
+<script src="data.enc.js"></script>
+<script>
+// ═══════════ 암호화 저장소 (데이터는 비밀번호 없이는 열람 불가) ═══════════
+// 원본 데이터는 setup.html 에서 암호화되어 data.enc.js(window.ENC) 로 들어옵니다.
+// 편집 내용은 같은 비밀번호로 암호화되어 이 브라우저 localStorage 에만 저장됩니다.
+const ENC_KEY='grace_enc_v1';
+let DB=null, KEY=null, SALT=null;
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a)));
+const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pw,salt){
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function unlock(pw){
+  // 우선순위: 이 브라우저에 저장된 편집본 → 없으면 배포된 원본(window.ENC)
+  const snap=localStorage.getItem(ENC_KEY);
+  const blob = snap ? JSON.parse(snap) : (window.ENC||null);
+  if(!blob) throw new Error('NO_DATA');
+  const salt=ub64(blob.salt), iv=ub64(blob.iv), ct=ub64(blob.ct);
+  const key=await deriveKey(pw,salt);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct); // 실패 시 throw
+  DB=JSON.parse(new TextDecoder().decode(pt));
+  KEY=key; SALT=salt;
+}
+async function save(){
+  if(!KEY) return;
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,new TextEncoder().encode(JSON.stringify(DB)));
+  localStorage.setItem(ENC_KEY,JSON.stringify({v:1,salt:b64(SALT),iv:b64(iv),ct:b64(ct)}));
+}
+function resetData(){ if(confirm('이 브라우저의 편집 내용을 지우고, 배포된 원본 데이터로 되돌립니다. 계속할까요?\n(다른 가족 기기의 데이터에는 영향 없음)')){ localStorage.removeItem(ENC_KEY); location.reload(); } }
+async function exportEnc(){
+  // 현재 데이터를 암호화해 data.enc.js 로 내려받기 → GitHub에 다시 올리면 모든 기기에 반영
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,new TextEncoder().encode(JSON.stringify(DB)));
+  const js='// 암호화된 임대관리 데이터 — 비밀번호 없이는 열람 불가\nwindow.ENC = '+JSON.stringify({v:1,salt:b64(SALT),iv:b64(iv),ct:b64(ct)})+';\n';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'})); a.download='data.enc.js'; a.click();
+}
+function uuid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ═══════════ HELPERS ═══════════
+const KRW=n=>'₩'+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+const EOK=n=>{ n=Math.abs(n); if(n>=100000000) return (n/100000000).toFixed(2).replace(/\.00$/,'')+'억'; if(n>=10000) return Math.round(n/10000)+'만'; return n.toLocaleString(); };
+function daysUntil(s){ if(!s) return null; const d=new Date(s); const n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); }
+function bName(id){ const b=DB.buildings.find(x=>x.id===id); return b?b.name:'—'; }
+function curMonth(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'); }
+function monthsRange(from,to){ const r=[]; let [y,m]=from.split('-').map(Number); const [ty,tm]=to.split('-').map(Number); while(y<ty||(y===ty&&m<=tm)){ r.push(y+'-'+String(m).padStart(2,'0')); m++; if(m>12){m=1;y++;} } return r; }
+
+function typeBadge(t){ const c={'전세':'#e0e7ff:#3730a3','월세':'#dcfce7:#15803d','반전세':'#fef9c3:#854d0e','공실':'#f3f4f6:#6b7280'}; const [bg,col]=(c[t]||c['공실']).split(':'); return `<span class="badge" style="background:${bg};color:${col};">${t}</span>`; }
+function insBadge(ins){ if(ins==='미가입') return `<span class="badge" style="background:#ffdad6;color:#93000a;">미가입</span>`; if(ins==='LH 전세임대') return `<span class="badge" style="background:#d2e4fb;color:#556679;">LH</span>`; return `<span class="badge" style="background:#dcfce7;color:#15803d;">가입</span>`; }
+
+// ═══════════ NAV ═══════════
+let cur='dashboard';
+const titles={dashboard:'대시보드',units:'건물 · 호실',payments:'납부 현황',finance:'재무'};
+const fabs={dashboard:'호실 추가',units:'호실 추가',payments:'호실 추가',finance:'거래 추가'};
+function navigate(p){ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+p).classList.add('active'); const nv=document.querySelector(`[data-page="${p}"]`); if(nv)nv.classList.add('active'); document.getElementById('ptitle').textContent=titles[p]; document.getElementById('fab').textContent=fabs[p]; cur=p; ['dashboard','units','payments','finance'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x===p?'#0058be':'#424754';}); renderPage(p); window.scrollTo(0,0); }
+function renderPage(p){ if(p==='dashboard')renderDashboard(); else if(p==='units')renderUnits(); else if(p==='payments')renderPayments(); else if(p==='finance')renderFinance(); }
+function renderAll(){ populateFilters(); renderPage(cur); buildNotif(); }
+function toggleMenu(){ const s=document.getElementById('sidebar'); s.classList.toggle('hidden'); s.classList.toggle('flex'); }
+
+function populateFilters(){
+  const opts='<option value="">전체 건물</option>'+DB.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  ['ufilter-building','pfilter-building'].forEach(id=>{const e=document.getElementById(id); if(e){const v=e.value; e.innerHTML=opts; e.value=v;}});
+  const mset=[...new Set(DB.transactions.map(t=>t.date.slice(0,7)))].sort().reverse();
+  const fm=document.getElementById('ffilter-month'); if(fm){const v=fm.value; fm.innerHTML='<option value="all">전체 기간</option>'+mset.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join(''); fm.value=v;}
+}
+
+// ═══════════ DASHBOARD ═══════════
+function renderDashboard(){
+  const us=DB.units, occ=us.filter(u=>u.type!=='공실');
+  const totalDeposit=us.reduce((s,u)=>s+u.deposit,0);
+  const monthlyRent=occ.reduce((s,u)=>s+u.rent,0);
+  const monthlyMgmt=occ.reduce((s,u)=>s+u.mgmt,0);
+  const occRate=us.length?((occ.length/us.length)*100).toFixed(0):0;
+  const cm=curMonth();
+  const unpaid=occ.filter(u=>u.rent>0 && !(DB.payments[u.id]&&DB.payments[u.id][cm]&&DB.payments[u.id][cm].rent));
+  document.getElementById('kpis').innerHTML=`
+    ${kpi('총 보증금','#0058be',EOK(totalDeposit)+' 원','전세환산 포함 '+us.length+'호실')}
+    ${kpi('월 임대료 수입','#15803d',KRW(monthlyRent),'관리비 별도 '+KRW(monthlyMgmt))}
+    ${kpi('입주율','#191c1e',occRate+'%',occ.length+' / '+us.length+'호실 입주')}
+    ${kpi('이번 달 미납','#ba1a1a',unpaid.length+'건',cm.replace('-','년 ')+'월 기준')}`;
+  // chart
+  const inc={}; DB.transactions.filter(t=>t.type==='income').forEach(t=>{const m=t.date.slice(0,7); inc[m]=(inc[m]||0)+t.amount;});
+  const ms=Object.keys(inc).sort().slice(-8); const max=Math.max(...ms.map(m=>inc[m]),1);
+  document.getElementById('rchart').innerHTML=ms.map((m,i)=>{const h=Math.round(inc[m]/max*100); const last=i===ms.length-1; return `<div class="flex-1 flex flex-col items-center group" style="gap:3px;"><div style="font-size:10px;color:#424754;opacity:0;" class="group-hover:opacity-100">${EOK(inc[m])}</div><div class="w-full rounded-t-md" style="height:${Math.max(h,3)}%;background:${last?'#0058be':'#d2e4fb'};max-width:42px;transition:height .6s;"></div></div>`;}).join('');
+  document.getElementById('rlabels').innerHTML=ms.map(m=>`<div class="flex-1 text-center" style="font-size:10px;color:#424754;">${parseInt(m.slice(5))}월</div>`).join('');
+  // insurance summary
+  const joined=occ.filter(u=>u.ins!=='미가입'&&u.ins!=='LH 전세임대').length;
+  const lh=occ.filter(u=>u.ins==='LH 전세임대').length;
+  const none=occ.filter(u=>u.ins==='미가입').length;
+  const totalFee=us.reduce((s,u)=>s+u.insFee,0);
+  document.getElementById('insurance-summary').innerHTML=`
+    <div class="space-y-3">
+      ${insRow('가입 완료','#15803d',joined,occ.length)}
+      ${insRow('LH 전세임대','#0058be',lh,occ.length)}
+      ${insRow('미가입','#ba1a1a',none,occ.length)}
+      <div class="pt-3 mt-1 border-t border-outline-variant flex justify-between" style="font-size:13px;"><span style="color:#424754;">연간 보증료 합계</span><b>${KRW(totalFee)}</b></div>
+    </div>`;
+  // unpaid list
+  document.getElementById('unpaid-list').innerHTML = unpaid.length ? `<table><tbody>${unpaid.map(u=>`<tr><td><b>${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit}</b><div style="font-size:12px;color:#424754;">${u.tenant}</div></td><td style="text-align:right;">${KRW(u.rent)}<div style="font-size:11px;color:#b91c1c;">매월 ${u.payDay}일</div></td><td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="markPaid('${u.id}')">완납 처리</button></td></tr>`).join('')}</tbody></table>` : `<div style="padding:28px;text-align:center;color:#15803d;font-weight:600;">✓ 이번 달 미납 없음</div>`;
+  // expiring
+  const exp=occ.filter(u=>{const d=daysUntil(u.end); return d!==null&&d>=0&&d<=120;}).sort((a,b)=>daysUntil(a.end)-daysUntil(b.end));
+  document.getElementById('expiring-list').innerHTML = exp.length ? `<table><tbody>${exp.map(u=>{const d=daysUntil(u.end); return `<tr><td><b>${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit}</b><div style="font-size:12px;color:#424754;">${u.tenant}</div></td><td>${u.end}</td><td style="text-align:right;"><span style="font-weight:700;color:${d<=30?'#b91c1c':d<=60?'#d97706':'#1d4ed8'};">D-${d}</span></td></tr>`;}).join('')}</tbody></table>` : `<div style="padding:28px;text-align:center;color:#424754;">120일 내 만료 예정 없음</div>`;
+}
+function kpi(label,color,val,sub){ return `<div class="glass p-5 rounded-xl fade"><div style="font-size:11px;font-weight:600;color:#424754;letter-spacing:.04em;margin-bottom:8px;">${label}</div><div style="font-size:24px;font-weight:700;color:${color};">${val}</div><div style="font-size:12px;color:#424754;margin-top:4px;">${sub}</div></div>`; }
+function insRow(label,color,n,total){ const pct=total?(n/total*100):0; return `<div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>${label}</span><b style="color:${color};">${n}호실</b></div><div style="height:6px;background:#eceef0;border-radius:9px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${color};border-radius:9px;"></div></div></div>`; }
+function markPaid(uid){ const cm=curMonth(); DB.payments[uid]=DB.payments[uid]||{}; DB.payments[uid][cm]=DB.payments[uid][cm]||{}; DB.payments[uid][cm].rent=true; save(); renderDashboard(); buildNotif(); }
+
+// ═══════════ UNITS ═══════════
+function renderUnits(){
+  const us=DB.units, occ=us.filter(u=>u.type!=='공실');
+  document.getElementById('units-stats').innerHTML=`
+    ${kpi('총 호실','#0058be',us.length+'호',DB.buildings.length+'개 건물')}
+    ${kpi('입주 / 공실','#191c1e',occ.length+' / '+(us.length-occ.length),'입주중 / 공실')}
+    ${kpi('월 임대료 합계','#15803d',KRW(occ.reduce((s,u)=>s+u.rent,0)),'관리비 '+KRW(occ.reduce((s,u)=>s+u.mgmt,0)))}
+    ${kpi('보증보험 미가입','#ba1a1a',occ.filter(u=>u.ins==='미가입').length+'호',occ.filter(u=>u.ins==='미가입').map(u=>u.unit).join(', ')||'없음')}`;
+  const bf=document.getElementById('ufilter-building').value, tf=document.getElementById('ufilter-type').value;
+  const blist=DB.buildings.filter(b=>!bf||b.id===bf);
+  document.getElementById('units-by-building').innerHTML=blist.map(b=>{
+    let rows=DB.units.filter(u=>u.bid===b.id); if(tf)rows=rows.filter(u=>u.type===tf);
+    const dep=rows.reduce((s,u)=>s+u.deposit,0), rent=rows.filter(u=>u.type!=='공실').reduce((s,u)=>s+u.rent,0);
+    return `<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+      <div class="p-4 border-b border-outline-variant flex flex-wrap justify-between items-center gap-2" style="background:#f2f4f6;">
+        <div><div style="font-size:16px;font-weight:700;">${b.name}</div><div style="font-size:12px;color:#424754;">${b.address} · ${b.floors||''}</div></div>
+        <div style="font-size:13px;color:#424754;">보증금 <b style="color:#0058be;">${EOK(dep)}</b> · 월세 <b style="color:#15803d;">${KRW(rent)}</b></div>
+      </div>
+      <div class="overflow-x-auto"><table><thead><tr><th>호실</th><th>임차인</th><th>유형</th><th style="text-align:right;">보증금</th><th style="text-align:right;">월세</th><th style="text-align:right;">관리비</th><th>계약기간</th><th style="text-align:center;">보증보험</th><th style="text-align:center;">신고</th><th style="text-align:center;">관리</th></tr></thead>
+      <tbody>${rows.length?rows.map(u=>{const d=daysUntil(u.end); const dd=d===null?'':d<0?'<span style="color:#6b7280;">만료</span>':d<=60?`<span style="color:#b91c1c;">D-${d}</span>`:`<span style="color:#424754;">D-${d}</span>`; return `<tr>
+        <td><b>${u.unit}</b></td><td>${u.tenant||'<span style="color:#9ca3af;">공실</span>'}</td><td>${typeBadge(u.type)}</td>
+        <td style="text-align:right;font-weight:600;">${u.deposit?KRW(u.deposit):'-'}</td>
+        <td style="text-align:right;">${u.rent?KRW(u.rent):'-'}</td>
+        <td style="text-align:right;color:#424754;">${u.mgmt?KRW(u.mgmt):'-'}</td>
+        <td style="font-size:13px;">${u.start?u.start+' ~ '+u.end:'-'}<div style="font-size:11px;">${dd}</div></td>
+        <td style="text-align:center;">${u.type==='공실'?'-':insBadge(u.ins)}</td>
+        <td style="text-align:center;">${u.type==='공실'?'-':(u.report?'<span style="color:#15803d;">✓</span>':'<span style="color:#b91c1c;">✗</span>')}</td>
+        <td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('unit','${u.id}')">수정</button></td>
+      </tr>`;}).join(''):'<tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af;">해당 호실 없음</td></tr>'}</tbody></table></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════ PAYMENTS ═══════════
+function renderPayments(){
+  const bf=document.getElementById('pfilter-building').value;
+  const months=monthsRange('2025-05',curMonth());
+  const blist=DB.buildings.filter(b=>!bf||b.id===bf);
+  document.getElementById('payment-tables').innerHTML=blist.map(b=>{
+    const rows=DB.units.filter(u=>u.bid===b.id&&u.type!=='공실');
+    return `<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+      <div class="p-4 border-b border-outline-variant" style="background:#f2f4f6;font-size:16px;font-weight:700;">${b.name}</div>
+      <div class="overflow-x-auto"><table><thead><tr><th style="position:sticky;left:0;background:#f2f4f6;">호실 / 임차인</th>${months.map(m=>`<th style="text-align:center;min-width:64px;">${parseInt(m.slice(5))}월<div style="font-size:9px;color:#9ca3af;">${m.slice(2,4)}</div></th>`).join('')}</tr></thead>
+      <tbody>${rows.map(u=>`<tr><td style="position:sticky;left:0;background:#fff;"><b>${u.unit}</b> <span style="font-size:12px;color:#424754;">${u.tenant}</span></td>${months.map(m=>{
+        const p=(DB.payments[u.id]||{})[m]||{};
+        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',u.mgmt>0,p.mgmt)}</div></td>`;
+      }).join('')}</tr>`).join('')}</tbody></table></div>
+    </div>`;
+  }).join('');
+}
+function pcell(uid,m,kind,applies,paid){
+  if(!applies) return `<span class="pcell" style="background:#eceef0;color:#bbb;" title="해당없음">–</span>`;
+  const st=paid?{bg:'#dcfce7',c:'#15803d',t:'○'}:{bg:'#ffdad6',c:'#b91c1c',t:'!'};
+  return `<span class="pcell" style="background:${st.bg};color:${st.c};" title="${kind==='rent'?'임대료':'관리비'} ${m}" onclick="togglePay('${uid}','${m}','${kind}')">${st.t}</span>`;
+}
+function togglePay(uid,m,kind){ DB.payments[uid]=DB.payments[uid]||{}; DB.payments[uid][m]=DB.payments[uid][m]||{}; DB.payments[uid][m][kind]=!DB.payments[uid][m][kind]; save(); renderPayments(); buildNotif(); }
+
+// ═══════════ FINANCE ═══════════
+function renderFinance(){
+  const mf=document.getElementById('ffilter-month').value;
+  let tx=DB.transactions; if(mf!=='all')tx=tx.filter(t=>t.date.slice(0,7)===mf);
+  const inc=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const profit=inc-exp, margin=inc?(profit/inc*100).toFixed(0):0;
+  document.getElementById('fkpis').innerHTML=`
+    ${kpi('총 수입','#0058be',KRW(inc),'임대수익')}
+    ${kpi('총 지출','#ba1a1a',KRW(exp),'운영·세금·보증료')}
+    ${kpi('순이익',profit>=0?'#191c1e':'#ba1a1a',(profit<0?'-':'')+KRW(Math.abs(profit)),'수입-지출')}
+    ${kpi('이익률','#0058be',margin+'%','순이익 / 수입')}`;
+  // category
+  const cats={}; tx.filter(t=>t.type==='expense').forEach(t=>{cats[t.cat]=(cats[t.cat]||0)+t.amount;});
+  const ce=Object.entries(cats).sort((a,b)=>b[1]-a[1]); const cmax=Math.max(...ce.map(c=>c[1]),1);
+  const colors=['#0058be','#ba1a1a','#d97706','#15803d','#7e22ce','#0891b2','#64748b'];
+  document.getElementById('fcat').innerHTML=ce.length?ce.map(([c,v],i)=>`<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span style="display:flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:50%;background:${colors[i%colors.length]};"></span>${c}</span><b>${KRW(v)}</b></div><div style="height:7px;background:#eceef0;border-radius:9px;overflow:hidden;"><div style="height:100%;width:${v/cmax*100}%;background:${colors[i%colors.length]};border-radius:9px;"></div></div></div>`).join(''):'<div style="color:#9ca3af;">지출 없음</div>';
+  // monthly P&L
+  const byM={}; tx.forEach(t=>{const m=t.date.slice(0,7); byM[m]=byM[m]||{i:0,e:0}; byM[m][t.type==='income'?'i':'e']+=t.amount;});
+  const mk=Object.keys(byM).sort();
+  document.getElementById('fmonthly').innerHTML=mk.map(m=>{const p=byM[m].i-byM[m].e; return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eceef0;font-size:13px;"><span style="color:#424754;">${m.replace('-','.')}</span><b style="color:${p>=0?'#15803d':'#ba1a1a'};">${p<0?'-':'+'}${EOK(p)}</b></div>`;}).join('');
+  // table
+  const sorted=[...tx].sort((a,b)=>b.date.localeCompare(a.date));
+  const cb=c=>{const m={'임대수익':'#d2e4fb:#556679','유지보수':'#ffdad6:#93000a','공공요금':'#d3e4fe:#1e3a5f','세금':'#fef9c3:#854d0e','보증료':'#e0e7ff:#3730a3','중개수수료':'#fce7f3:#9d174d','기타':'#f3f4f6:#374151'}; const [bg,col]=(m[c]||m['기타']).split(':'); return `<span class="badge" style="background:${bg};color:${col};">${c}</span>`;};
+  document.getElementById('ftbody').innerHTML=sorted.map(t=>`<tr><td>${t.date}</td><td><b>${t.desc}</b><div style="margin-top:3px;">${cb(t.cat)}</div></td><td>${t.type==='income'?'<span style="color:#0058be;font-weight:600;">수입</span>':'<span style="color:#ba1a1a;font-weight:600;">지출</span>'}</td><td style="text-align:right;font-weight:700;color:${t.type==='income'?'#0058be':'#ba1a1a'};">${t.type==='income'?'+':'-'} ${KRW(t.amount)}</td><td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('tx','${t.id}')">수정</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px;color:#9ca3af;">거래 없음</td></tr>';
+}
+
+// ═══════════ MODAL ═══════════
+let mMode=null,mId=null;
+function openAdd(){ const t=cur==='finance'?'tx':'unit'; mMode='add-'+t; mId=null; document.getElementById('mtitle').textContent=t==='tx'?'거래 추가':'호실 추가'; document.getElementById('mdel').classList.add('hidden'); modalBody(t,null); document.getElementById('modal').classList.add('open'); }
+function openEdit(t,id){ mMode='edit-'+t; mId=id; document.getElementById('mtitle').textContent=t==='unit'?'호실 수정':'거래 수정'; document.getElementById('mdel').classList.remove('hidden'); const d=t==='unit'?DB.units.find(u=>u.id===id):DB.transactions.find(x=>x.id===id); modalBody(t,d); document.getElementById('modal').classList.add('open'); }
+function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
+  if(t==='unit'){ el.innerHTML=`<div class="space-y-3">
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">건물 *</label><select class="fi" id="f-bid">${DB.buildings.map(b=>`<option value="${b.id}" ${d.bid===b.id?'selected':''}>${b.name}</option>`).join('')}</select></div><div><label class="fl">호실 *</label><input class="fi" id="f-unit" value="${d.unit||''}" placeholder="201"/></div></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">임차인</label><input class="fi" id="f-tenant" value="${d.tenant||''}"/></div><div><label class="fl">유형</label><select class="fi" id="f-type">${['전세','월세','반전세','공실'].map(x=>`<option ${d.type===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+    <div class="grid grid-cols-3 gap-3"><div><label class="fl">보증금</label><input class="fi" id="f-deposit" type="number" value="${d.deposit||''}"/></div><div><label class="fl">월세</label><input class="fi" id="f-rent" type="number" value="${d.rent||''}"/></div><div><label class="fl">관리비</label><input class="fi" id="f-mgmt" type="number" value="${d.mgmt||''}"/></div></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">계약 시작</label><input class="fi" id="f-start" type="date" value="${d.start||''}"/></div><div><label class="fl">계약 종료</label><input class="fi" id="f-end" type="date" value="${d.end||''}"/></div></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">월 납부일</label><input class="fi" id="f-payDay" type="number" value="${d.payDay||''}" placeholder="5"/></div><div><label class="fl">보증보험</label><select class="fi" id="f-ins">${['미가입','전세보증보험','임대보증보험','LH 전세임대'].map(x=>`<option ${d.ins===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">보증료(연)</label><input class="fi" id="f-insFee" type="number" value="${d.insFee||''}"/></div><div><label class="fl">임대차 신고</label><select class="fi" id="f-report"><option value="true" ${d.report?'selected':''}>완료</option><option value="false" ${!d.report?'selected':''}>미완료</option></select></div></div>
+  </div>`; }
+  else { el.innerHTML=`<div class="space-y-3">
+    <div><label class="fl">날짜 *</label><input class="fi" id="f-date" type="date" value="${d.date||new Date().toISOString().slice(0,10)}"/></div>
+    <div><label class="fl">항목 *</label><input class="fi" id="f-desc" value="${d.desc||''}"/></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="fl">유형</label><select class="fi" id="f-type"><option value="income" ${d.type==='income'?'selected':''}>수입</option><option value="expense" ${d.type==='expense'?'selected':''}>지출</option></select></div><div><label class="fl">카테고리</label><select class="fi" id="f-cat">${['임대수익','유지보수','공공요금','세금','보증료','중개수수료','기타'].map(c=>`<option ${d.cat===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
+    <div><label class="fl">금액 *</label><input class="fi" id="f-amount" type="number" value="${d.amount||''}"/></div>
+  </div>`; }
+}
+function saveModal(){ const [a,t]=mMode.split('-'); const g=id=>document.getElementById('f-'+id).value;
+  if(t==='unit'){ const unit=g('unit').trim(); if(!unit){alert('호실은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),bid:g('bid'),unit,tenant:g('tenant').trim(),type:g('type'),deposit:+g('deposit')||0,rent:+g('rent')||0,mgmt:+g('mgmt')||0,start:g('start'),end:g('end'),payDay:+g('payDay')||0,ins:g('ins'),insFee:+g('insFee')||0,report:g('report')==='true',jeonse:a==='edit'?(DB.units.find(u=>u.id===mId).jeonse||0):0}; if(a==='edit')DB.units=DB.units.map(u=>u.id===mId?o:u); else DB.units.push(o); }
+  else { const desc=g('desc').trim(),amt=+g('amount')||0; if(!desc||!amt){alert('항목과 금액은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),date:g('date'),desc,type:g('type'),cat:g('cat'),amount:amt}; if(a==='edit')DB.transactions=DB.transactions.map(x=>x.id===mId?o:x); else DB.transactions.push(o); }
+  save(); closeModal(); populateFilters(); renderPage(cur); buildNotif();
+}
+function delItem(){ const [,t]=mMode.split('-'); if(!confirm('삭제하시겠습니까?'))return; if(t==='unit'){DB.units=DB.units.filter(u=>u.id!==mId); delete DB.payments[mId];} else DB.transactions=DB.transactions.filter(x=>x.id!==mId); save(); closeModal(); populateFilters(); renderPage(cur); buildNotif(); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+// ═══════════ NOTIFICATIONS ═══════════
+function buildNotif(){ const items=[]; const cm=curMonth();
+  DB.units.filter(u=>u.type!=='공실').forEach(u=>{ const d=daysUntil(u.end); if(d!==null&&d>=0&&d<=60)items.push({i:'event',c:'#ba1a1a',bg:'#ffdad6',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} (${u.tenant}) 계약 D-${d}일`}); if(u.ins==='미가입')items.push({i:'gpp_maybe',c:'#d97706',bg:'#fef3c7',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} 보증보험 미가입`}); if(u.rent>0&&!((DB.payments[u.id]||{})[cm]||{}).rent)items.push({i:'payments',c:'#b91c1c',bg:'#ffdad6',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} ${cm.slice(5)}월 임대료 미납`}); });
+  if(!items.length)items.push({i:'check_circle',c:'#15803d',bg:'#dcfce7',t:'특이사항 없음'});
+  document.getElementById('nbadge').style.display=items.some(x=>x.c==='#b91c1c'||x.c==='#ba1a1a')?'':'none';
+  window._notif=items;
+}
+function showNotif(){ const p=document.getElementById('notif'); p.classList.toggle('hidden'); document.getElementById('nlist').innerHTML=(window._notif||[]).map(n=>`<div style="display:flex;gap:9px;padding:9px;border-radius:9px;background:${n.bg}55;align-items:flex-start;"><span class="material-symbols-outlined" style="font-size:18px;color:${n.c};">${n.i}</span><span style="font-size:13px;">${n.t}</span></div>`).join(''); }
+document.addEventListener('click',e=>{const p=document.getElementById('notif'); if(!p.classList.contains('hidden')&&!p.contains(e.target)&&!e.target.closest('[onclick="showNotif()"]'))p.classList.add('hidden');});
+
+// ═══════════ CSV ═══════════
+function exportCSV(type){ let rows=[],fn='';
+  if(type==='units'){ fn='호실현황.csv'; rows=[['건물','호실','임차인','유형','보증금','월세','관리비','납부일','보증보험','보증료','임대차신고','계약시작','계약종료'],...DB.units.map(u=>[bName(u.bid),u.unit,u.tenant,u.type,u.deposit,u.rent,u.mgmt,u.payDay,u.ins,u.insFee,u.report?'완료':'미완료',u.start,u.end])]; }
+  else { fn='재무내역.csv'; rows=[['날짜','항목','유형','카테고리','금액'],...DB.transactions.map(t=>[t.date,t.desc,t.type==='income'?'수입':'지출',t.cat,t.amount])]; }
+  const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=fn; a.click();
+}
+
+// ═══════════ INIT (잠금 해제 후 시작) ═══════════
+function startApp(){
+  populateFilters(); renderDashboard(); buildNotif();
+  ['dashboard','units','payments','finance'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x==='dashboard'?'#0058be':'#424754';});
+}
+async function doUnlock(){
+  const pw=document.getElementById('lock-pw').value;
+  if(!pw){ return; }
+  const err=document.getElementById('lock-err'); const btn=document.getElementById('lock-btn');
+  err.textContent=''; btn.disabled=true; btn.textContent='확인 중...';
+  try{
+    await unlock(pw);
+    document.getElementById('lock').style.display='none';
+    document.body.style.overflow='';
+    startApp();
+  }catch(e){
+    btn.disabled=false; btn.textContent='열기';
+    if(e.message==='NO_DATA'){ err.innerHTML='데이터 파일(data.enc.js)을 찾을 수 없습니다.<br>setup.html에서 먼저 생성하세요.'; }
+    else { err.textContent='비밀번호가 올바르지 않습니다.'; }
+    document.getElementById('lock-pw').select();
+  }
+}
+document.getElementById('lock-pw').addEventListener('keydown',e=>{ if(e.key==='Enter')doUnlock(); });
+document.body.style.overflow='hidden';
+document.getElementById('lock-pw').focus();
+</script>
+</body>
+</html>

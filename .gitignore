@@ -1,0 +1,5 @@
+# 원본 데이터가 들어있는 파일 — 절대 올리지 않음
+setup.html
+_*.json
+*.xlsx
+.claude/
