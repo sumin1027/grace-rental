@@ -142,7 +142,10 @@ tbody tr:hover td{background:#f7f9fb;}
   <div id="page-payments" class="page p-5 md:p-6 space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div style="font-size:14px;color:#424754;">각 달의 <b>왼쪽 칸 임(月임대료)</b>, <b>오른쪽 칸 관(관리비)</b>입니다. 칸을 클릭하면 완납 ↔ 미납이 전환됩니다.</div>
-      <select id="pfilter-building" class="fi" style="width:auto;" onchange="renderPayments()"><option value="">전체 건물</option></select>
+      <div class="flex gap-2">
+        <select id="pfilter-year" class="fi" style="width:auto;" onchange="renderPayments()"></select>
+        <select id="pfilter-building" class="fi" style="width:auto;" onchange="renderPayments()"><option value="">전체 건물</option></select>
+      </div>
     </div>
     <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs items-center" style="color:#424754;">
       <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">임</span>월임대료</span>
@@ -263,6 +266,18 @@ function populateFilters(){
   ['ufilter-building','pfilter-building'].forEach(id=>{const e=document.getElementById(id); if(e){const v=e.value; e.innerHTML=opts; e.value=v;}});
   const mset=[...new Set(DB.transactions.map(t=>t.date.slice(0,7)))].sort().reverse();
   const fm=document.getElementById('ffilter-month'); if(fm){const v=fm.value; fm.innerHTML='<option value="all">전체 기간</option>'+mset.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join(''); fm.value=v;}
+  // 납부현황 연도 선택 (계약 시작~종료 연도 + 올해 범위)
+  const py=document.getElementById('pfilter-year');
+  if(py){
+    const yrsArr=[];
+    DB.units.forEach(u=>{ if(u.start)yrsArr.push(+u.start.slice(0,4)); if(u.end)yrsArr.push(+u.end.slice(0,4)); });
+    const nowY=new Date().getFullYear();
+    let y0=Math.min(2025,nowY,...yrsArr), y1=Math.max(nowY,...yrsArr);
+    const v=py.value; const years=[]; for(let y=y0;y<=y1;y++)years.push(y);
+    py.innerHTML=years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+    py.value = v || String(nowY);
+    if(!py.value) py.value=String(years[years.length-1]);
+  }
 }
 
 // ═══════════ DASHBOARD ═══════════
@@ -342,7 +357,8 @@ function renderUnits(){
 // ═══════════ PAYMENTS ═══════════
 function renderPayments(){
   const bf=document.getElementById('pfilter-building').value;
-  const months=monthsRange('2025-05',curMonth());
+  const yr=document.getElementById('pfilter-year').value||String(new Date().getFullYear());
+  const months=monthsRange(yr+'-01',yr+'-12');
   const blist=DB.buildings.filter(b=>!bf||b.id===bf);
   document.getElementById('payment-tables').innerHTML=blist.map(b=>{
     const rows=DB.units.filter(u=>u.bid===b.id&&u.type!=='공실');
