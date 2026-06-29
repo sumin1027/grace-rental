@@ -141,13 +141,16 @@ tbody tr:hover td{background:#f7f9fb;}
   <!-- PAYMENTS -->
   <div id="page-payments" class="page p-5 md:p-6 space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div style="font-size:14px;color:#424754;">셀을 클릭하면 <b>완납 → 미납 → 해당없음</b> 순으로 전환됩니다. 좌측은 임대료, 우측은 관리비입니다.</div>
+      <div style="font-size:14px;color:#424754;">각 달의 <b>왼쪽 칸 임(月임대료)</b>, <b>오른쪽 칸 관(관리비)</b>입니다. 칸을 클릭하면 완납 ↔ 미납이 전환됩니다.</div>
       <select id="pfilter-building" class="fi" style="width:auto;" onchange="renderPayments()"><option value="">전체 건물</option></select>
     </div>
-    <div class="flex flex-wrap gap-4 text-xs items-center" style="color:#424754;">
-      <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;">○</span>완납</span>
-      <span class="flex items-center gap-1"><span class="pcell" style="background:#ffdad6;color:#b91c1c;">!</span>미납</span>
-      <span class="flex items-center gap-1"><span class="pcell" style="background:#eceef0;color:#9ca3af;">–</span>해당없음(전세 등)</span>
+    <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs items-center" style="color:#424754;">
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">임</span>월임대료</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">관</span>관리비</span>
+      <span style="color:#c2c6d6;">|</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;font-weight:800;">임</span>완납(초록)</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#ffdad6;color:#b91c1c;font-weight:800;">임</span>미납(빨강)</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#eceef0;color:#c7c7c7;font-weight:800;">임</span>해당없음(전세 등)</span>
     </div>
     <div id="payment-tables" class="space-y-6"></div>
   </div>
@@ -354,9 +357,10 @@ function renderPayments(){
   }).join('');
 }
 function pcell(uid,m,kind,applies,paid){
-  if(!applies) return `<span class="pcell" style="background:#eceef0;color:#bbb;" title="해당없음">–</span>`;
-  const st=paid?{bg:'#dcfce7',c:'#15803d',t:'○'}:{bg:'#ffdad6',c:'#b91c1c',t:'!'};
-  return `<span class="pcell" style="background:${st.bg};color:${st.c};" title="${kind==='rent'?'임대료':'관리비'} ${m}" onclick="togglePay('${uid}','${m}','${kind}')">${st.t}</span>`;
+  const lab=kind==='rent'?'임':'관'; const nm=kind==='rent'?'임대료':'관리비';
+  if(!applies) return `<span class="pcell" style="background:#eceef0;color:#c7c7c7;font-weight:800;" title="${nm} 해당없음">${lab}</span>`;
+  const st=paid?{bg:'#dcfce7',c:'#15803d'}:{bg:'#ffdad6',c:'#b91c1c'};
+  return `<span class="pcell" style="background:${st.bg};color:${st.c};font-weight:800;" title="${nm} ${m} · ${paid?'완납':'미납'} (클릭하여 변경)" onclick="togglePay('${uid}','${m}','${kind}')">${lab}</span>`;
 }
 function togglePay(uid,m,kind){ DB.payments[uid]=DB.payments[uid]||{}; DB.payments[uid][m]=DB.payments[uid][m]||{}; DB.payments[uid][m][kind]=!DB.payments[uid][m][kind]; save(); renderPayments(); buildNotif(); }
 
