@@ -71,6 +71,7 @@ tbody tr:hover td{background:#f7f9fb;}
     <div class="nav-item" data-page="units" onclick="navigate('units')"><span class="material-symbols-outlined">meeting_room</span>건물 · 호실</div>
     <div class="nav-item" data-page="payments" onclick="navigate('payments')"><span class="material-symbols-outlined">event_available</span>납부 현황</div>
     <div class="nav-item" data-page="finance" onclick="navigate('finance')"><span class="material-symbols-outlined">payments</span>재무</div>
+    <div class="nav-item" data-page="messages" onclick="navigate('messages')"><span class="material-symbols-outlined">forum</span>안내 메시지</div>
   </nav>
   <div class="mt-auto pt-4 border-t border-outline-variant">
     <div class="nav-item" onclick="exportEnc()" style="font-size:13px;"><span class="material-symbols-outlined" style="font-size:18px;">cloud_upload</span>암호화 백업 내보내기</div>
@@ -169,6 +170,12 @@ tbody tr:hover td{background:#f7f9fb;}
       <div class="overflow-x-auto"><table><thead><tr><th>날짜</th><th>항목</th><th>유형</th><th style="text-align:right;">금액</th><th style="text-align:center;">관리</th></tr></thead><tbody id="ftbody"></tbody></table></div>
     </div>
   </div>
+
+  <!-- MESSAGES -->
+  <div id="page-messages" class="page p-5 md:p-6 space-y-5">
+    <div style="font-size:14px;color:#424754;">임차인에게 보낼 문자 문구를 저장해두고, <b>복사</b> 버튼으로 문자앱에 붙여넣어 사용하세요. <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">[호실]</code> <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">[임차인]</code> 처럼 적어두면 보낼 때 직접 바꿔 넣기 편합니다.</div>
+    <div id="messages-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </div>
 </main>
 
 <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-bright border-t border-outline-variant flex items-center justify-around z-40">
@@ -176,6 +183,7 @@ tbody tr:hover td{background:#f7f9fb;}
   <button onclick="navigate('units')" class="flex flex-col items-center gap-1 text-xs" id="mn-units"><span class="material-symbols-outlined" style="font-size:22px;">meeting_room</span>호실</button>
   <button onclick="navigate('payments')" class="flex flex-col items-center gap-1 text-xs" id="mn-payments"><span class="material-symbols-outlined" style="font-size:22px;">event_available</span>납부</button>
   <button onclick="navigate('finance')" class="flex flex-col items-center gap-1 text-xs" id="mn-finance"><span class="material-symbols-outlined" style="font-size:22px;">payments</span>재무</button>
+  <button onclick="navigate('messages')" class="flex flex-col items-center gap-1 text-xs" id="mn-messages"><span class="material-symbols-outlined" style="font-size:22px;">forum</span>메시지</button>
 </nav>
 
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
@@ -219,6 +227,7 @@ async function unlock(pw){
   const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct); // 실패 시 throw
   DB=JSON.parse(new TextDecoder().decode(pt));
   KEY=key; SALT=salt;
+  if(!Array.isArray(DB.messages)) DB.messages=defaultMessages(); // 안내 메시지 기본 템플릿
 }
 async function save(){
   if(!KEY) return;
@@ -249,10 +258,10 @@ function insBadge(ins){ if(ins==='미가입') return `<span class="badge" style=
 
 // ═══════════ NAV ═══════════
 let cur='dashboard';
-const titles={dashboard:'대시보드',units:'건물 · 호실',payments:'납부 현황',finance:'재무'};
-const fabs={dashboard:'호실 추가',units:'호실 추가',payments:'호실 추가',finance:'거래 추가'};
-function navigate(p){ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+p).classList.add('active'); const nv=document.querySelector(`[data-page="${p}"]`); if(nv)nv.classList.add('active'); document.getElementById('ptitle').textContent=titles[p]; document.getElementById('fab').textContent=fabs[p]; cur=p; ['dashboard','units','payments','finance'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x===p?'#0058be':'#424754';}); renderPage(p); window.scrollTo(0,0); }
-function renderPage(p){ if(p==='dashboard')renderDashboard(); else if(p==='units')renderUnits(); else if(p==='payments')renderPayments(); else if(p==='finance')renderFinance(); }
+const titles={dashboard:'대시보드',units:'건물 · 호실',payments:'납부 현황',finance:'재무',messages:'입주민 안내 메시지'};
+const fabs={dashboard:'호실 추가',units:'호실 추가',payments:'호실 추가',finance:'거래 추가',messages:'메시지 추가'};
+function navigate(p){ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+p).classList.add('active'); const nv=document.querySelector(`[data-page="${p}"]`); if(nv)nv.classList.add('active'); document.getElementById('ptitle').textContent=titles[p]; document.getElementById('fab').textContent=fabs[p]; cur=p; ['dashboard','units','payments','finance','messages'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x===p?'#0058be':'#424754';}); renderPage(p); window.scrollTo(0,0); }
+function renderPage(p){ if(p==='dashboard')renderDashboard(); else if(p==='units')renderUnits(); else if(p==='payments')renderPayments(); else if(p==='finance')renderFinance(); else if(p==='messages')renderMessages(); }
 function renderAll(){ populateFilters(); renderPage(cur); buildNotif(); }
 function toggleMenu(){ const s=document.getElementById('sidebar'); s.classList.toggle('hidden'); s.classList.toggle('flex'); }
 
@@ -404,8 +413,8 @@ function renderFinance(){
 
 // ═══════════ MODAL ═══════════
 let mMode=null,mId=null;
-function openAdd(){ const t=cur==='finance'?'tx':'unit'; mMode='add-'+t; mId=null; document.getElementById('mtitle').textContent=t==='tx'?'거래 추가':'호실 추가'; document.getElementById('mdel').classList.add('hidden'); modalBody(t,null); document.getElementById('modal').classList.add('open'); }
-function openEdit(t,id){ mMode='edit-'+t; mId=id; document.getElementById('mtitle').textContent=t==='unit'?'호실 수정':'거래 수정'; document.getElementById('mdel').classList.remove('hidden'); const d=t==='unit'?DB.units.find(u=>u.id===id):DB.transactions.find(x=>x.id===id); modalBody(t,d); document.getElementById('modal').classList.add('open'); }
+function openAdd(){ const t=cur==='finance'?'tx':cur==='messages'?'msg':'unit'; mMode='add-'+t; mId=null; document.getElementById('mtitle').textContent=t==='tx'?'거래 추가':t==='msg'?'메시지 추가':'호실 추가'; document.getElementById('mdel').classList.add('hidden'); modalBody(t,null); document.getElementById('modal').classList.add('open'); }
+function openEdit(t,id){ mMode='edit-'+t; mId=id; document.getElementById('mtitle').textContent=t==='unit'?'호실 수정':t==='msg'?'메시지 수정':'거래 수정'; document.getElementById('mdel').classList.remove('hidden'); const d=t==='unit'?DB.units.find(u=>u.id===id):t==='msg'?DB.messages.find(x=>x.id===id):DB.transactions.find(x=>x.id===id); modalBody(t,d); document.getElementById('modal').classList.add('open'); }
 function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
   if(t==='unit'){ el.innerHTML=`<div class="space-y-3">
     <div class="grid grid-cols-2 gap-3"><div><label class="fl">건물 *</label><select class="fi" id="f-bid">${DB.buildings.map(b=>`<option value="${b.id}" ${d.bid===b.id?'selected':''}>${b.name}</option>`).join('')}</select></div><div><label class="fl">호실 *</label><input class="fi" id="f-unit" value="${d.unit||''}" placeholder="201"/></div></div>
@@ -414,6 +423,10 @@ function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
     <div class="grid grid-cols-2 gap-3"><div><label class="fl">계약 시작</label><input class="fi" id="f-start" type="date" value="${d.start||''}"/></div><div><label class="fl">계약 종료</label><input class="fi" id="f-end" type="date" value="${d.end||''}"/></div></div>
     <div class="grid grid-cols-2 gap-3"><div><label class="fl">월 납부일</label><input class="fi" id="f-payDay" type="number" value="${d.payDay||''}" placeholder="5"/></div><div><label class="fl">보증보험</label><select class="fi" id="f-ins">${['미가입','전세보증보험','임대보증보험','LH 전세임대'].map(x=>`<option ${d.ins===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
     <div class="grid grid-cols-2 gap-3"><div><label class="fl">보증료(연)</label><input class="fi" id="f-insFee" type="number" value="${d.insFee||''}"/></div><div><label class="fl">임대차 신고</label><select class="fi" id="f-report"><option value="true" ${d.report?'selected':''}>완료</option><option value="false" ${!d.report?'selected':''}>미완료</option></select></div></div>
+  </div>`; }
+  else if(t==='msg'){ el.innerHTML=`<div class="space-y-3">
+    <div><label class="fl">제목 *</label><input class="fi" id="f-title" value="${(d.title||'').replace(/"/g,'&quot;')}" placeholder="예: 월세 납부 안내"/></div>
+    <div><label class="fl">문자 내용 *</label><textarea class="fi" id="f-body" rows="8" placeholder="안녕하세요, [호실] [임차인]님.&#10;..." style="resize:vertical;line-height:1.6;">${(d.body||'')}</textarea></div>
   </div>`; }
   else { el.innerHTML=`<div class="space-y-3">
     <div><label class="fl">날짜 *</label><input class="fi" id="f-date" type="date" value="${d.date||new Date().toISOString().slice(0,10)}"/></div>
@@ -424,11 +437,36 @@ function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
 }
 function saveModal(){ const [a,t]=mMode.split('-'); const g=id=>document.getElementById('f-'+id).value;
   if(t==='unit'){ const unit=g('unit').trim(); if(!unit){alert('호실은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),bid:g('bid'),unit,tenant:g('tenant').trim(),type:g('type'),deposit:+g('deposit')||0,rent:+g('rent')||0,mgmt:+g('mgmt')||0,start:g('start'),end:g('end'),payDay:+g('payDay')||0,ins:g('ins'),insFee:+g('insFee')||0,report:g('report')==='true',jeonse:a==='edit'?(DB.units.find(u=>u.id===mId).jeonse||0):0}; if(a==='edit')DB.units=DB.units.map(u=>u.id===mId?o:u); else DB.units.push(o); }
+  else if(t==='msg'){ const title=g('title').trim(),body=g('body').trim(); if(!title||!body){alert('제목과 내용은 필수입니다.');return;} DB.messages=DB.messages||[]; const o={id:a==='edit'?mId:uuid(),title,body}; if(a==='edit')DB.messages=DB.messages.map(x=>x.id===mId?o:x); else DB.messages.push(o); }
   else { const desc=g('desc').trim(),amt=+g('amount')||0; if(!desc||!amt){alert('항목과 금액은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),date:g('date'),desc,type:g('type'),cat:g('cat'),amount:amt}; if(a==='edit')DB.transactions=DB.transactions.map(x=>x.id===mId?o:x); else DB.transactions.push(o); }
   save(); closeModal(); populateFilters(); renderPage(cur); buildNotif();
 }
-function delItem(){ const [,t]=mMode.split('-'); if(!confirm('삭제하시겠습니까?'))return; if(t==='unit'){DB.units=DB.units.filter(u=>u.id!==mId); delete DB.payments[mId];} else DB.transactions=DB.transactions.filter(x=>x.id!==mId); save(); closeModal(); populateFilters(); renderPage(cur); buildNotif(); }
+function delItem(){ const [,t]=mMode.split('-'); if(!confirm('삭제하시겠습니까?'))return; if(t==='unit'){DB.units=DB.units.filter(u=>u.id!==mId); delete DB.payments[mId];} else if(t==='msg'){DB.messages=(DB.messages||[]).filter(x=>x.id!==mId);} else DB.transactions=DB.transactions.filter(x=>x.id!==mId); save(); closeModal(); populateFilters(); renderPage(cur); buildNotif(); }
 function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+// ═══════════ MESSAGES (입주민 안내 문자) ═══════════
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderMessages(){
+  const list=DB.messages||[];
+  document.getElementById('messages-list').innerHTML = list.length ? list.map(m=>`
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between p-4 border-b border-outline-variant" style="background:#f2f4f6;">
+        <div style="font-weight:700;font-size:15px;">${escHtml(m.title)}</div>
+        <div class="flex gap-1">
+          <button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="copyMsg('${m.id}',this)">복사</button>
+          <button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('msg','${m.id}')">수정</button>
+        </div>
+      </div>
+      <div style="padding:16px;font-size:14px;color:#191c1e;white-space:pre-wrap;line-height:1.65;flex:1;">${escHtml(m.body)}</div>
+    </div>`).join('') : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">저장된 메시지가 없습니다. 우측 상단 <b>메시지 추가</b>로 만들어 보세요.</div>`;
+}
+function copyMsg(id,btn){ const m=(DB.messages||[]).find(x=>x.id===id); if(!m)return; navigator.clipboard.writeText(m.body).then(()=>{ const o=btn.textContent; btn.textContent='복사됨 ✓'; btn.style.background='#dcfce7'; btn.style.color='#15803d'; setTimeout(()=>{btn.textContent=o;btn.style.background='';btn.style.color='';},1500); }).catch(()=>alert('복사 실패 — 길게 눌러 직접 복사해 주세요.')); }
+function defaultMessages(){ return [
+  {id:uuid(),title:'월세 납부 안내',body:'안녕하세요, [호실]호 [임차인]님.\n그레이스하우스입니다.\n\n이번 달 임대료 납부일이 곧 도래하여 안내드립니다.\n- 임대료/관리비: \n- 납부 계좌: \n\n늘 감사합니다.'},
+  {id:uuid(),title:'월세 미납 안내',body:'안녕하세요, [호실]호 [임차인]님.\n그레이스하우스입니다.\n\n금월 임대료가 아직 확인되지 않아 안내드립니다.\n확인 후 납부 부탁드리며, 이미 납부하셨다면 본 메시지는 무시해 주세요.\n\n감사합니다.'},
+  {id:uuid(),title:'계약 만료 안내',body:'안녕하세요, [호실]호 [임차인]님.\n그레이스하우스입니다.\n\n임대차 계약 만료일([만료일])이 다가와 안내드립니다.\n재계약 의사를 회신 주시면 일정 협의 도와드리겠습니다.\n\n감사합니다.'},
+  {id:uuid(),title:'공용 공지 (점검/청소)',body:'안녕하세요, 입주민 여러분.\n그레이스하우스입니다.\n\n[일시] [내용] 안내드립니다.\n이용에 참고 부탁드립니다.\n\n감사합니다.'},
+]; }
 
 // ═══════════ NOTIFICATIONS ═══════════
 function buildNotif(){ const items=[]; const cm=curMonth();
@@ -451,7 +489,7 @@ function exportCSV(type){ let rows=[],fn='';
 // ═══════════ INIT (잠금 해제 후 시작) ═══════════
 function startApp(){
   populateFilters(); renderDashboard(); buildNotif();
-  ['dashboard','units','payments','finance'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x==='dashboard'?'#0058be':'#424754';});
+  ['dashboard','units','payments','finance','messages'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x==='dashboard'?'#0058be':'#424754';});
 }
 async function doUnlock(){
   const pw=document.getElementById('lock-pw').value;
