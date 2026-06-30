@@ -297,7 +297,7 @@ function renderDashboard(){
   // chart
   const inc={}; DB.transactions.filter(t=>t.type==='income').forEach(t=>{const m=t.date.slice(0,7); inc[m]=(inc[m]||0)+t.amount;});
   const ms=Object.keys(inc).sort().slice(-8); const max=Math.max(...ms.map(m=>inc[m]),1);
-  document.getElementById('rchart').innerHTML=ms.map((m,i)=>{const h=Math.round(inc[m]/max*100); const last=i===ms.length-1; return `<div class="flex-1 flex flex-col items-center group" style="gap:3px;"><div style="font-size:10px;color:#424754;opacity:0;" class="group-hover:opacity-100">${EOK(inc[m])}</div><div class="w-full rounded-t-md" style="height:${Math.max(h,3)}%;background:${last?'#0058be':'#d2e4fb'};max-width:42px;transition:height .6s;"></div></div>`;}).join('');
+  document.getElementById('rchart').innerHTML=ms.length?ms.map((m,i)=>{const h=Math.round(inc[m]/max*100); const last=i===ms.length-1; return `<div class="flex-1 flex flex-col items-center justify-end group" style="height:100%;gap:3px;"><div style="font-size:10px;color:#424754;opacity:0;white-space:nowrap;" class="group-hover:opacity-100">${EOK(inc[m])}</div><div class="w-full rounded-t-md" style="height:${Math.max(h,2)}%;background:${last?'#0058be':'#d2e4fb'};max-width:42px;transition:height .6s;"></div></div>`;}).join(''):'<div style="margin:auto;color:#9ca3af;font-size:13px;">수입 데이터가 없습니다.</div>';
   document.getElementById('rlabels').innerHTML=ms.map(m=>`<div class="flex-1 text-center" style="font-size:10px;color:#424754;">${parseInt(m.slice(5))}월</div>`).join('');
   // insurance summary
   const joined=occ.filter(u=>u.ins!=='미가입'&&u.ins!=='LH 전세임대').length;
