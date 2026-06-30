@@ -51,10 +51,8 @@ tbody tr:hover td{background:#f7f9fb;}
 <!-- 잠금 화면 -->
 <div id="lock" style="position:fixed;inset:0;z-index:200;background:linear-gradient(135deg,#0058be,#003a7e);display:flex;align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fff;border-radius:18px;padding:32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
-    <div style="width:52px;height:52px;background:#d8e2ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-      <span class="material-symbols-outlined" style="color:#0058be;font-size:28px;">lock</span>
-    </div>
-    <div style="font-size:20px;font-weight:700;">그레이스하우스 임대관리</div>
+    <img src="logo.png" alt="Grace House" style="height:48px;width:auto;margin-bottom:18px;"/>
+    <div style="font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="color:#0058be;font-size:20px;">lock</span>임대관리 대시보드</div>
     <div style="font-size:13px;color:#424754;margin-top:4px;margin-bottom:20px;">가족 전용 · 비밀번호를 입력하세요.</div>
     <input id="lock-pw" type="password" placeholder="비밀번호" autocomplete="current-password" style="width:100%;padding:12px 14px;border:1px solid #c2c6d6;border-radius:10px;font-size:15px;outline:none;"/>
     <div id="lock-err" style="color:#ba1a1a;font-size:13px;margin-top:8px;min-height:18px;"></div>
@@ -64,12 +62,9 @@ tbody tr:hover td{background:#f7f9fb;}
 </div>
 
 <aside id="sidebar" class="fixed left-0 top-0 h-full flex flex-col p-4 border-r border-outline-variant bg-surface-container-low w-64 z-40 hidden md:flex">
-  <div class="flex items-center gap-3 mb-7 px-2 pt-1">
-    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary"><span class="material-symbols-outlined fill">apartment</span></div>
-    <div>
-      <div style="font-size:15px;font-weight:700;">그레이스하우스</div>
-      <div style="font-size:11px;color:#424754;letter-spacing:.04em;">임대관리 대시보드</div>
-    </div>
+  <div class="mb-7 px-2 pt-2">
+    <img src="logo.png" alt="Grace House" style="height:40px;width:auto;display:block;margin-bottom:8px;"/>
+    <div style="font-size:11px;color:#424754;letter-spacing:.04em;">임대관리 대시보드</div>
   </div>
   <nav class="flex-1 space-y-1">
     <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')"><span class="material-symbols-outlined">dashboard</span>대시보드</div>
