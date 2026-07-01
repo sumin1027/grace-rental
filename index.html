@@ -372,7 +372,8 @@ function renderPayments(){
       <div class="overflow-x-auto"><table><thead><tr><th style="position:sticky;left:0;background:#f2f4f6;">호실 / 임차인 · 개시일</th>${months.map(m=>`<th style="text-align:center;min-width:64px;">${parseInt(m.slice(5))}월<div style="font-size:9px;color:#9ca3af;">${m.slice(2,4)}</div></th>`).join('')}</tr></thead>
       <tbody>${rows.map(u=>`<tr><td style="position:sticky;left:0;background:#fff;"><div><b>${u.unit}</b> <span style="font-size:12px;color:#424754;">${u.tenant}</span></div><div style="font-size:11px;color:#727785;margin-top:2px;">개시 ${u.start||'-'}</div><div style="font-size:11px;color:#424754;margin-top:1px;">임대료 ${u.rent?KRW(u.rent):'-'}${u.bid!=='sl'?' · 관리비 '+(u.mgmt?KRW(u.mgmt):'-'):''}</div></td>${months.map(m=>{
         const p=(DB.payments[u.id]||{})[m]||{};
-        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',u.mgmt>0||u.bid==='sl',p.mgmt,u.bid==='sl')}</div></td>`;
+        const on=!u.start||m>=u.start.slice(0,7); // 계약 개시월 이전은 비활성
+        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',on&&u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',on&&(u.mgmt>0||u.bid==='sl'),p.mgmt,u.bid==='sl')}</div></td>`;
       }).join('')}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }).join('');
