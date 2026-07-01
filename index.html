@@ -389,7 +389,8 @@ function renderPayments(){
         const p=(DB.payments[u.id]||{})[m]||{};
         const on=!u.start||m>=u.start.slice(0,7); // 계약 개시월 이전은 비활성
         const rPaid=!!p.rentDate||p.rent===true, mPaid=!!p.mgmtDate||p.mgmt===true;
-        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',on&&u.rent>0,rPaid,false,p.rentDate)}${pcell(u.id,m,'mgmt',on&&(u.mgmt>0||u.bid==='sl'),mPaid,u.bid==='sl',p.mgmtDate)}</div></td>`;
+        const utilOn=u.mgmt>0||(u.bid==='sl'&&!['sl-101','sl-301'].includes(u.id)); // 신림동 101·301은 공과금 제외
+        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',on&&u.rent>0,rPaid,false,p.rentDate)}${pcell(u.id,m,'mgmt',on&&utilOn,mPaid,u.bid==='sl',p.mgmtDate)}</div></td>`;
       }).join('')}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }).join('');
