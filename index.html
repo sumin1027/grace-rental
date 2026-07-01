@@ -137,7 +137,7 @@ tbody tr:hover td{background:#f7f9fb;}
   <!-- PAYMENTS -->
   <div id="page-payments" class="page p-5 md:p-6 space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div style="font-size:14px;color:#424754;">각 달의 <b>왼쪽 칸 임(月임대료)</b>, <b>오른쪽 칸 관(관리비)</b>입니다. 칸을 클릭하면 완납 ↔ 미납이 전환됩니다.</div>
+      <div style="font-size:14px;color:#424754;">각 달의 <b>왼쪽 칸 임(月임대료)</b>, <b>오른쪽 칸 관(관리비)·공(공과금)</b>입니다. 칸을 클릭해 <b>납부일자</b>를 입력하면 완납(초록) 처리되고 칸에 납부한 <b>날짜(일)</b>가 표시됩니다.</div>
       <div class="flex gap-2">
         <select id="pfilter-year" class="fi" style="width:auto;" onchange="renderPayments()"></select>
         <select id="pfilter-building" class="fi" style="width:auto;" onchange="renderPayments()"><option value="">전체 건물</option></select>
@@ -148,7 +148,7 @@ tbody tr:hover td{background:#f7f9fb;}
       <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">관</span>관리비</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">공</span>공과금(신림동)</span>
       <span style="color:#c2c6d6;">|</span>
-      <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;font-weight:800;">임</span>완납(초록)</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;font-weight:800;">11</span>완납(숫자=납부일)</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#ffdad6;color:#b91c1c;font-weight:800;">임</span>미납(빨강)</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#eceef0;color:#c7c7c7;font-weight:800;">임</span>해당없음(전세 등)</span>
     </div>
@@ -195,6 +195,21 @@ tbody tr:hover td{background:#f7f9fb;}
       <button class="btn-s" onclick="closeModal()">취소</button>
       <button id="mdel" class="btn-d hidden" onclick="delItem()">삭제</button>
       <button class="btn-p" onclick="saveModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 납부일자 입력 -->
+<div class="modal-bg" id="paymodal" onclick="if(event.target===this)closePay()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs mx-4 overflow-hidden">
+    <div class="p-5 border-b border-outline-variant"><div id="pay-title" style="font-size:16px;font-weight:700;"></div></div>
+    <div class="p-5 space-y-2">
+      <label class="fl">납부일자</label>
+      <input type="date" id="pay-date" class="fi"/>
+    </div>
+    <div class="flex gap-2 p-5 border-t border-outline-variant items-center justify-between">
+      <button id="pay-clear" class="btn-d" onclick="clearPay()" style="display:none;">미납으로</button>
+      <div class="flex gap-2 ml-auto"><button class="btn-s" onclick="closePay()">취소</button><button class="btn-p" onclick="savePay()">저장</button></div>
     </div>
   </div>
 </div>
@@ -373,18 +388,23 @@ function renderPayments(){
       <tbody>${rows.map(u=>`<tr><td style="position:sticky;left:0;background:#fff;"><div><b>${u.unit}</b> <span style="font-size:12px;color:#424754;">${u.tenant}</span></div><div style="font-size:11px;color:#727785;margin-top:2px;">개시 ${u.start||'-'}</div><div style="font-size:11px;color:#424754;margin-top:1px;">임대료 ${u.rent?KRW(u.rent):'-'}${u.bid!=='sl'?' · 관리비 '+(u.mgmt?KRW(u.mgmt):'-'):''}</div></td>${months.map(m=>{
         const p=(DB.payments[u.id]||{})[m]||{};
         const on=!u.start||m>=u.start.slice(0,7); // 계약 개시월 이전은 비활성
-        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',on&&u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',on&&(u.mgmt>0||u.bid==='sl'),p.mgmt,u.bid==='sl')}</div></td>`;
+        const rPaid=!!p.rentDate||p.rent===true, mPaid=!!p.mgmtDate||p.mgmt===true;
+        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',on&&u.rent>0,rPaid,false,p.rentDate)}${pcell(u.id,m,'mgmt',on&&(u.mgmt>0||u.bid==='sl'),mPaid,u.bid==='sl',p.mgmtDate)}</div></td>`;
       }).join('')}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }).join('');
 }
-function pcell(uid,m,kind,applies,paid,isUtil){
+function pcell(uid,m,kind,applies,paid,isUtil,dateStr){
   const lab=kind==='rent'?'임':(isUtil?'공':'관'); const nm=kind==='rent'?'임대료':(isUtil?'공과금':'관리비');
   if(!applies) return `<span class="pcell" style="background:#eceef0;color:#c7c7c7;font-weight:800;" title="${nm} 해당없음">${lab}</span>`;
-  const st=paid?{bg:'#dcfce7',c:'#15803d'}:{bg:'#ffdad6',c:'#b91c1c'};
-  return `<span class="pcell" style="background:${st.bg};color:${st.c};font-weight:800;" title="${nm} ${m} · ${paid?'완납':'미납'} (클릭하여 변경)" onclick="togglePay('${uid}','${m}','${kind}')">${lab}</span>`;
+  if(paid){ const day=dateStr?(+dateStr.slice(8,10)):null; const show=day?String(day):'○'; return `<span class="pcell" style="background:#dcfce7;color:#15803d;font-weight:800;" title="${nm} ${dateStr?('납부일 '+dateStr):(m+' 완납')} · 클릭하여 변경" onclick="openPay('${uid}','${m}','${kind}',${!!isUtil})">${show}</span>`; }
+  return `<span class="pcell" style="background:#ffdad6;color:#b91c1c;font-weight:800;" title="${nm} ${m} · 미납 · 클릭하여 납부일 입력" onclick="openPay('${uid}','${m}','${kind}',${!!isUtil})">${lab}</span>`;
 }
-function togglePay(uid,m,kind){ DB.payments[uid]=DB.payments[uid]||{}; DB.payments[uid][m]=DB.payments[uid][m]||{}; DB.payments[uid][m][kind]=!DB.payments[uid][m][kind]; save(); renderPayments(); buildNotif(); }
+let payTarget=null;
+function openPay(uid,m,kind,isUtil){ payTarget={uid,m,kind}; const nm=kind==='rent'?'임대료':(isUtil?'공과금':'관리비'); const u=DB.units.find(x=>x.id===uid); document.getElementById('pay-title').textContent=`${(u?u.unit+'호 ':'')}${m.replace('-','년 ')}월 ${nm}`; const p=(DB.payments[uid]||{})[m]||{}; const cur=kind==='rent'?p.rentDate:p.mgmtDate; document.getElementById('pay-date').value=cur||(m+'-01'); const hasPaid=cur||(kind==='rent'?p.rent:p.mgmt); document.getElementById('pay-clear').style.display=hasPaid?'':'none'; document.getElementById('paymodal').classList.add('open'); }
+async function savePay(){ if(!payTarget)return; const {uid,m,kind}=payTarget; const d=document.getElementById('pay-date').value; if(!d){alert('날짜를 선택하세요.');return;} DB.payments[uid]=DB.payments[uid]||{}; DB.payments[uid][m]=DB.payments[uid][m]||{}; const o=DB.payments[uid][m]; if(kind==='rent'){o.rentDate=d;o.rent=true;}else{o.mgmtDate=d;o.mgmt=true;} await save(); closePay(); renderPayments(); buildNotif(); }
+async function clearPay(){ if(!payTarget)return; const {uid,m,kind}=payTarget; const o=(DB.payments[uid]||{})[m]; if(o){ if(kind==='rent'){delete o.rentDate;o.rent=false;}else{delete o.mgmtDate;o.mgmt=false;} } await save(); closePay(); renderPayments(); buildNotif(); }
+function closePay(){ document.getElementById('paymodal').classList.remove('open'); payTarget=null; }
 
 // ═══════════ FINANCE ═══════════
 function renderFinance(){
