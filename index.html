@@ -146,6 +146,7 @@ tbody tr:hover td{background:#f7f9fb;}
     <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs items-center" style="color:#424754;">
       <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">임</span>월임대료</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">관</span>관리비</span>
+      <span class="flex items-center gap-1"><span class="pcell" style="background:#e0e7ff;color:#3730a3;font-weight:800;">공</span>공과금(신림동)</span>
       <span style="color:#c2c6d6;">|</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#dcfce7;color:#15803d;font-weight:800;">임</span>완납(초록)</span>
       <span class="flex items-center gap-1"><span class="pcell" style="background:#ffdad6;color:#b91c1c;font-weight:800;">임</span>미납(빨강)</span>
@@ -369,15 +370,15 @@ function renderPayments(){
     return `<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
       <div class="p-4 border-b border-outline-variant" style="background:#f2f4f6;font-size:16px;font-weight:700;">${b.name}</div>
       <div class="overflow-x-auto"><table><thead><tr><th style="position:sticky;left:0;background:#f2f4f6;">호실 / 임차인 · 개시일</th>${months.map(m=>`<th style="text-align:center;min-width:64px;">${parseInt(m.slice(5))}월<div style="font-size:9px;color:#9ca3af;">${m.slice(2,4)}</div></th>`).join('')}</tr></thead>
-      <tbody>${rows.map(u=>`<tr><td style="position:sticky;left:0;background:#fff;"><div><b>${u.unit}</b> <span style="font-size:12px;color:#424754;">${u.tenant}</span></div><div style="font-size:11px;color:#727785;margin-top:2px;">개시 ${u.start||'-'}</div><div style="font-size:11px;color:#424754;margin-top:1px;">임대료 ${u.rent?KRW(u.rent):'-'} · 관리비 ${u.mgmt?KRW(u.mgmt):'-'}</div></td>${months.map(m=>{
+      <tbody>${rows.map(u=>`<tr><td style="position:sticky;left:0;background:#fff;"><div><b>${u.unit}</b> <span style="font-size:12px;color:#424754;">${u.tenant}</span></div><div style="font-size:11px;color:#727785;margin-top:2px;">개시 ${u.start||'-'}</div><div style="font-size:11px;color:#424754;margin-top:1px;">임대료 ${u.rent?KRW(u.rent):'-'}${u.bid!=='sl'?' · 관리비 '+(u.mgmt?KRW(u.mgmt):'-'):''}</div></td>${months.map(m=>{
         const p=(DB.payments[u.id]||{})[m]||{};
-        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',u.mgmt>0||u.bid==='sl',p.mgmt)}</div></td>`;
+        return `<td style="padding:5px;text-align:center;"><div style="display:flex;gap:2px;justify-content:center;">${pcell(u.id,m,'rent',u.rent>0,p.rent)}${pcell(u.id,m,'mgmt',u.mgmt>0||u.bid==='sl',p.mgmt,u.bid==='sl')}</div></td>`;
       }).join('')}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }).join('');
 }
-function pcell(uid,m,kind,applies,paid){
-  const lab=kind==='rent'?'임':'관'; const nm=kind==='rent'?'임대료':'관리비';
+function pcell(uid,m,kind,applies,paid,isUtil){
+  const lab=kind==='rent'?'임':(isUtil?'공':'관'); const nm=kind==='rent'?'임대료':(isUtil?'공과금':'관리비');
   if(!applies) return `<span class="pcell" style="background:#eceef0;color:#c7c7c7;font-weight:800;" title="${nm} 해당없음">${lab}</span>`;
   const st=paid?{bg:'#dcfce7',c:'#15803d'}:{bg:'#ffdad6',c:'#b91c1c'};
   return `<span class="pcell" style="background:${st.bg};color:${st.c};font-weight:800;" title="${nm} ${m} · ${paid?'완납':'미납'} (클릭하여 변경)" onclick="togglePay('${uid}','${m}','${kind}')">${lab}</span>`;
