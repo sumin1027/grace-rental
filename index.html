@@ -158,9 +158,10 @@ tbody tr:hover td{background:#f7f9fb;}
   <!-- FINANCE -->
   <div id="page-finance" class="page p-5 md:p-6 space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <select id="ffilter-building" class="fi" style="width:auto;" onchange="renderFinance()"><option value="">전체 건물</option></select>
-        <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 기간</option></select>
+        <select id="ffilter-year" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 연도</option></select>
+        <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 월</option></select>
       </div>
       <div class="flex gap-2">
         <button class="btn-s flex items-center gap-1" onclick="rebuildHjIncome()"><span class="material-symbols-outlined" style="font-size:16px;">sync</span>납부현황 기준 임대수입 정리</button>
@@ -290,8 +291,9 @@ function toggleMenu(){ const s=document.getElementById('sidebar'); s.classList.t
 function populateFilters(){
   const opts='<option value="">전체 건물</option>'+DB.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
   ['ufilter-building','pfilter-building','ffilter-building'].forEach(id=>{const e=document.getElementById(id); if(e){const v=e.value; e.innerHTML=opts; e.value=v;}});
-  const mset=[...new Set(DB.transactions.map(t=>t.date.slice(0,7)))].sort().reverse();
-  const fm=document.getElementById('ffilter-month'); if(fm){const v=fm.value; fm.innerHTML='<option value="all">전체 기간</option>'+mset.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join(''); fm.value=v;}
+  const yset=[...new Set(DB.transactions.map(t=>t.date.slice(0,4)))].sort().reverse();
+  const fy=document.getElementById('ffilter-year'); if(fy){const v=fy.value; fy.innerHTML='<option value="all">전체 연도</option>'+yset.map(y=>`<option value="${y}">${y}년</option>`).join(''); fy.value=v;}
+  const fm=document.getElementById('ffilter-month'); if(fm){const v=fm.value; fm.innerHTML='<option value="all">전체 월</option>'+Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join(''); fm.value=v;}
   // 납부현황 연도 선택 (계약 시작~종료 연도 + 올해 범위)
   const py=document.getElementById('pfilter-year');
   if(py){
@@ -417,8 +419,9 @@ function closePay(){ document.getElementById('paymodal').classList.remove('open'
 function txBid(t){ return t.bid||'hj'; } // 건물 미지정 거래는 홍제동으로 간주
 function renderFinance(){
   const mf=document.getElementById('ffilter-month').value;
+  const yf=document.getElementById('ffilter-year').value;
   const bf=document.getElementById('ffilter-building').value;
-  let tx=DB.transactions; if(mf!=='all')tx=tx.filter(t=>t.date.slice(0,7)===mf); if(bf)tx=tx.filter(t=>txBid(t)===bf);
+  let tx=DB.transactions; if(bf)tx=tx.filter(t=>txBid(t)===bf); if(yf!=='all')tx=tx.filter(t=>t.date.slice(0,4)===yf); if(mf!=='all')tx=tx.filter(t=>String(+t.date.slice(5,7))===mf);
   const inc=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const exp=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const profit=inc-exp, margin=inc?(profit/inc*100).toFixed(0):0;
