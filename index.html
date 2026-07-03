@@ -158,7 +158,10 @@ tbody tr:hover td{background:#f7f9fb;}
   <!-- FINANCE -->
   <div id="page-finance" class="page p-5 md:p-6 space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 기간</option></select>
+      <div class="flex gap-2">
+        <select id="ffilter-building" class="fi" style="width:auto;" onchange="renderFinance()"><option value="">전체 건물</option></select>
+        <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 기간</option></select>
+      </div>
       <button class="btn-s flex items-center gap-1" onclick="exportCSV('finance')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="fkpis"></div>
@@ -283,7 +286,7 @@ function toggleMenu(){ const s=document.getElementById('sidebar'); s.classList.t
 
 function populateFilters(){
   const opts='<option value="">전체 건물</option>'+DB.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
-  ['ufilter-building','pfilter-building'].forEach(id=>{const e=document.getElementById(id); if(e){const v=e.value; e.innerHTML=opts; e.value=v;}});
+  ['ufilter-building','pfilter-building','ffilter-building'].forEach(id=>{const e=document.getElementById(id); if(e){const v=e.value; e.innerHTML=opts; e.value=v;}});
   const mset=[...new Set(DB.transactions.map(t=>t.date.slice(0,7)))].sort().reverse();
   const fm=document.getElementById('ffilter-month'); if(fm){const v=fm.value; fm.innerHTML='<option value="all">전체 기간</option>'+mset.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join(''); fm.value=v;}
   // 납부현황 연도 선택 (계약 시작~종료 연도 + 올해 범위)
@@ -408,9 +411,11 @@ async function clearPay(){ if(!payTarget)return; const {uid,m,kind}=payTarget; c
 function closePay(){ document.getElementById('paymodal').classList.remove('open'); payTarget=null; }
 
 // ═══════════ FINANCE ═══════════
+function txBid(t){ return t.bid||'hj'; } // 건물 미지정 거래는 홍제동으로 간주
 function renderFinance(){
   const mf=document.getElementById('ffilter-month').value;
-  let tx=DB.transactions; if(mf!=='all')tx=tx.filter(t=>t.date.slice(0,7)===mf);
+  const bf=document.getElementById('ffilter-building').value;
+  let tx=DB.transactions; if(mf!=='all')tx=tx.filter(t=>t.date.slice(0,7)===mf); if(bf)tx=tx.filter(t=>txBid(t)===bf);
   const inc=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const exp=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const profit=inc-exp, margin=inc?(profit/inc*100).toFixed(0):0;
@@ -431,7 +436,8 @@ function renderFinance(){
   // table
   const sorted=[...tx].sort((a,b)=>b.date.localeCompare(a.date));
   const cb=c=>{const m={'임대수익':'#d2e4fb:#556679','유지보수':'#ffdad6:#93000a','공공요금':'#d3e4fe:#1e3a5f','세금':'#fef9c3:#854d0e','보증료':'#e0e7ff:#3730a3','중개수수료':'#fce7f3:#9d174d','기타':'#f3f4f6:#374151'}; const [bg,col]=(m[c]||m['기타']).split(':'); return `<span class="badge" style="background:${bg};color:${col};">${c}</span>`;};
-  document.getElementById('ftbody').innerHTML=sorted.map(t=>`<tr><td>${t.date}</td><td><b>${t.desc}</b><div style="margin-top:3px;">${cb(t.cat)}</div></td><td>${t.type==='income'?'<span style="color:#0058be;font-weight:600;">수입</span>':'<span style="color:#ba1a1a;font-weight:600;">지출</span>'}</td><td style="text-align:right;font-weight:700;color:${t.type==='income'?'#0058be':'#ba1a1a'};">${t.type==='income'?'+':'-'} ${KRW(t.amount)}</td><td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('tx','${t.id}')">수정</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px;color:#9ca3af;">거래 없음</td></tr>';
+  const bb=t=>{const short=bName(txBid(t)).replace(' 그레이스하우스','').replace(' 658-11번지','')||'홍제동'; const c=txBid(t)==='sl'?'#fff7ed:#c2410c':'#eff6ff:#1e40af'; const [bg,col]=c.split(':'); return `<span class="badge" style="background:${bg};color:${col};">${short}</span>`;};
+  document.getElementById('ftbody').innerHTML=sorted.map(t=>`<tr><td>${t.date}</td><td><b>${t.desc}</b><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${bb(t)}${cb(t.cat)}</div></td><td>${t.type==='income'?'<span style="color:#0058be;font-weight:600;">수입</span>':'<span style="color:#ba1a1a;font-weight:600;">지출</span>'}</td><td style="text-align:right;font-weight:700;color:${t.type==='income'?'#0058be':'#ba1a1a'};">${t.type==='income'?'+':'-'} ${KRW(t.amount)}</td><td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('tx','${t.id}')">수정</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px;color:#9ca3af;">거래 없음</td></tr>';
 }
 
 // ═══════════ MODAL ═══════════
@@ -452,6 +458,7 @@ function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
     <div><label class="fl">문자 내용 *</label><textarea class="fi" id="f-body" rows="8" placeholder="안녕하세요, [호실] [임차인]님.&#10;..." style="resize:vertical;line-height:1.6;">${(d.body||'')}</textarea></div>
   </div>`; }
   else { el.innerHTML=`<div class="space-y-3">
+    <div><label class="fl">건물 *</label><select class="fi" id="f-bid">${DB.buildings.map(b=>`<option value="${b.id}" ${(d.bid||'hj')===b.id?'selected':''}>${b.name}</option>`).join('')}</select></div>
     <div><label class="fl">날짜 *</label><input class="fi" id="f-date" type="date" value="${d.date||new Date().toISOString().slice(0,10)}"/></div>
     <div><label class="fl">항목 *</label><input class="fi" id="f-desc" value="${d.desc||''}"/></div>
     <div class="grid grid-cols-2 gap-3"><div><label class="fl">유형</label><select class="fi" id="f-type"><option value="income" ${d.type==='income'?'selected':''}>수입</option><option value="expense" ${d.type==='expense'?'selected':''}>지출</option></select></div><div><label class="fl">카테고리</label><select class="fi" id="f-cat">${['임대수익','유지보수','공공요금','세금','보증료','중개수수료','기타'].map(c=>`<option ${d.cat===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
@@ -461,7 +468,7 @@ function modalBody(t,d){ d=d||{}; const el=document.getElementById('mbody');
 function saveModal(){ const [a,t]=mMode.split('-'); const g=id=>document.getElementById('f-'+id).value;
   if(t==='unit'){ const unit=g('unit').trim(); if(!unit){alert('호실은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),bid:g('bid'),unit,tenant:g('tenant').trim(),type:g('type'),deposit:+g('deposit')||0,rent:+g('rent')||0,mgmt:+g('mgmt')||0,start:g('start'),end:g('end'),payDay:+g('payDay')||0,ins:g('ins'),insFee:+g('insFee')||0,report:g('report')==='true',jeonse:a==='edit'?(DB.units.find(u=>u.id===mId).jeonse||0):0}; if(a==='edit')DB.units=DB.units.map(u=>u.id===mId?o:u); else DB.units.push(o); }
   else if(t==='msg'){ const title=g('title').trim(),body=g('body').trim(); if(!title||!body){alert('제목과 내용은 필수입니다.');return;} DB.messages=DB.messages||[]; const o={id:a==='edit'?mId:uuid(),title,body}; if(a==='edit')DB.messages=DB.messages.map(x=>x.id===mId?o:x); else DB.messages.push(o); }
-  else { const desc=g('desc').trim(),amt=+g('amount')||0; if(!desc||!amt){alert('항목과 금액은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),date:g('date'),desc,type:g('type'),cat:g('cat'),amount:amt}; if(a==='edit')DB.transactions=DB.transactions.map(x=>x.id===mId?o:x); else DB.transactions.push(o); }
+  else { const desc=g('desc').trim(),amt=+g('amount')||0; if(!desc||!amt){alert('항목과 금액은 필수입니다.');return;} const o={id:a==='edit'?mId:uuid(),bid:g('bid'),date:g('date'),desc,type:g('type'),cat:g('cat'),amount:amt}; if(a==='edit')DB.transactions=DB.transactions.map(x=>x.id===mId?o:x); else DB.transactions.push(o); }
   save(); closeModal(); populateFilters(); renderPage(cur); buildNotif();
 }
 function delItem(){ const [,t]=mMode.split('-'); if(!confirm('삭제하시겠습니까?'))return; if(t==='unit'){DB.units=DB.units.filter(u=>u.id!==mId); delete DB.payments[mId];} else if(t==='msg'){DB.messages=(DB.messages||[]).filter(x=>x.id!==mId);} else DB.transactions=DB.transactions.filter(x=>x.id!==mId); save(); closeModal(); populateFilters(); renderPage(cur); buildNotif(); }
@@ -504,7 +511,7 @@ document.addEventListener('click',e=>{const p=document.getElementById('notif'); 
 // ═══════════ CSV ═══════════
 function exportCSV(type){ let rows=[],fn='';
   if(type==='units'){ fn='호실현황.csv'; rows=[['건물','호실','임차인','유형','보증금','월세','관리비','납부일','보증보험','보증료','임대차신고','계약시작','계약종료'],...DB.units.map(u=>[bName(u.bid),u.unit,u.tenant,u.type,u.deposit,u.rent,u.mgmt,u.payDay,u.ins,u.insFee,u.report?'완료':'미완료',u.start,u.end])]; }
-  else { fn='재무내역.csv'; rows=[['날짜','항목','유형','카테고리','금액'],...DB.transactions.map(t=>[t.date,t.desc,t.type==='income'?'수입':'지출',t.cat,t.amount])]; }
+  else { fn='재무내역.csv'; rows=[['건물','날짜','항목','유형','카테고리','금액'],...DB.transactions.map(t=>[bName(txBid(t)),t.date,t.desc,t.type==='income'?'수입':'지출',t.cat,t.amount])]; }
   const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=fn; a.click();
 }
