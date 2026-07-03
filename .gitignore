@@ -3,3 +3,5 @@ setup.html
 _*.json
 *.xlsx
 .claude/
+
+__pycache__/
