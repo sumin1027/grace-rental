@@ -165,6 +165,7 @@ tbody tr:hover td{background:#f7f9fb;}
       </div>
       <div class="flex gap-2">
         <button class="btn-s flex items-center gap-1" onclick="rebuildHjIncome()"><span class="material-symbols-outlined" style="font-size:16px;">sync</span>납부현황 기준 임대수입 정리</button>
+        <button class="btn-s flex items-center gap-1" onclick="importBank2026()"><span class="material-symbols-outlined" style="font-size:16px;">account_balance</span>통장 지출 반영(2026)</button>
         <button class="btn-s flex items-center gap-1" onclick="exportCSV('finance')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
       </div>
     </div>
@@ -462,6 +463,20 @@ async function rebuildHjIncome(){
   await save(); populateFilters(); renderFinance(); buildNotif();
   const total=months.reduce((s,m)=>s+byM[m],0);
   alert(`홍제동 임대수입 ${months.length}건(합계 ${KRW(total)})을 납부현황 기준으로 정리했습니다.\n\n모든 가족 기기에 반영하려면 사이드바 "암호화 백업 내보내기" 후 GitHub에 다시 올리세요.`);
+}
+// 2026년 통장(홍제동) 월별 전체 출금액 → 홍제동 지출 반영 (id 고정으로 중복 없이 갱신)
+function importBank2026(){
+  const data={'2026-01':5280210,'2026-02':2256839,'2026-03':6088140,'2026-04':3562734,'2026-05':2192843,'2026-06':2698709,'2026-07':128300};
+  if(!confirm('2026년 통장 거래내역의 월별 전체 출금액을 홍제동 지출로 반영합니다.\n(이미 반영돼 있으면 최신 금액으로 갱신됩니다.)\n\n계속할까요?'))return;
+  Object.entries(data).forEach(([m,amt])=>{
+    const id='bank-'+m;
+    const o={id,bid:'hj',date:m+'-28',desc:`${(+m.slice(5))}월 지출 (통장 거래내역)`,cat:'기타',type:'expense',amount:amt};
+    const i=DB.transactions.findIndex(t=>t.id===id);
+    if(i>=0)DB.transactions[i]=o; else DB.transactions.push(o);
+  });
+  save(); populateFilters(); renderFinance(); buildNotif();
+  const total=Object.values(data).reduce((s,v)=>s+v,0);
+  alert(`2026년 통장 지출 7건(합계 ${KRW(total)})을 홍제동 지출로 반영했습니다.\n\n모든 가족 기기에 반영하려면 사이드바 "암호화 백업 내보내기" 후 GitHub에 다시 올리세요.`);
 }
 
 // ═══════════ MODAL ═══════════
