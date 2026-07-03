@@ -162,7 +162,10 @@ tbody tr:hover td{background:#f7f9fb;}
         <select id="ffilter-building" class="fi" style="width:auto;" onchange="renderFinance()"><option value="">전체 건물</option></select>
         <select id="ffilter-month" class="fi" style="width:auto;" onchange="renderFinance()"><option value="all">전체 기간</option></select>
       </div>
-      <button class="btn-s flex items-center gap-1" onclick="exportCSV('finance')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
+      <div class="flex gap-2">
+        <button class="btn-s flex items-center gap-1" onclick="rebuildHjIncome()"><span class="material-symbols-outlined" style="font-size:16px;">sync</span>납부현황 기준 임대수입 정리</button>
+        <button class="btn-s flex items-center gap-1" onclick="exportCSV('finance')"><span class="material-symbols-outlined" style="font-size:16px;">download</span>CSV 내보내기</button>
+      </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="fkpis"></div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -438,6 +441,24 @@ function renderFinance(){
   const cb=c=>{const m={'임대수익':'#d2e4fb:#556679','유지보수':'#ffdad6:#93000a','공공요금':'#d3e4fe:#1e3a5f','세금':'#fef9c3:#854d0e','보증료':'#e0e7ff:#3730a3','중개수수료':'#fce7f3:#9d174d','기타':'#f3f4f6:#374151'}; const [bg,col]=(m[c]||m['기타']).split(':'); return `<span class="badge" style="background:${bg};color:${col};">${c}</span>`;};
   const bb=t=>{const short=bName(txBid(t)).replace(' 그레이스하우스','').replace(' 658-11번지','')||'홍제동'; const c=txBid(t)==='sl'?'#fff7ed:#c2410c':'#eff6ff:#1e40af'; const [bg,col]=c.split(':'); return `<span class="badge" style="background:${bg};color:${col};">${short}</span>`;};
   document.getElementById('ftbody').innerHTML=sorted.map(t=>`<tr><td>${t.date}</td><td><b>${t.desc}</b><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${bb(t)}${cb(t.cat)}</div></td><td>${t.type==='income'?'<span style="color:#0058be;font-weight:600;">수입</span>':'<span style="color:#ba1a1a;font-weight:600;">지출</span>'}</td><td style="text-align:right;font-weight:700;color:${t.type==='income'?'#0058be':'#ba1a1a'};">${t.type==='income'?'+':'-'} ${KRW(t.amount)}</td><td style="text-align:center;"><button class="btn-s" style="padding:4px 10px;font-size:12px;" onclick="openEdit('tx','${t.id}')">수정</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px;color:#9ca3af;">거래 없음</td></tr>';
+}
+async function rebuildHjIncome(){
+  if(!confirm('홍제동 그레이스하우스의 임대수입 거래를 납부현황(완납 기록) 기준으로 다시 정리합니다.\n\n· 홍제동 기존 임대수익 거래는 교체됩니다.\n· 지출 거래와 신림동 거래는 그대로 유지됩니다.\n· 월별로 완납된 임대료+관리비를 합산해 수입으로 기록합니다.\n\n계속할까요?'))return;
+  const hjUnits=DB.units.filter(u=>u.bid==='hj');
+  // 기존 홍제동 임대수익(수입) 거래 제거
+  DB.transactions=DB.transactions.filter(t=>!(t.type==='income'&&txBid(t)==='hj'));
+  // 월별 합산
+  const byM={};
+  hjUnits.forEach(u=>{ const pm=DB.payments[u.id]||{}; Object.entries(pm).forEach(([m,p])=>{
+    const rPaid=!!p.rentDate||p.rent===true, mPaid=!!p.mgmtDate||p.mgmt===true;
+    let amt=0; if(rPaid)amt+=u.rent||0; if(mPaid)amt+=u.mgmt||0;
+    if(amt>0) byM[m]=(byM[m]||0)+amt;
+  }); });
+  const months=Object.keys(byM).sort();
+  months.forEach(m=>{ DB.transactions.push({id:uuid(),bid:'hj',date:m+'-25',desc:`${(+m.slice(5))}월 임대수입 (납부현황 기준)`,cat:'임대수익',type:'income',amount:byM[m]}); });
+  await save(); populateFilters(); renderFinance(); buildNotif();
+  const total=months.reduce((s,m)=>s+byM[m],0);
+  alert(`홍제동 임대수입 ${months.length}건(합계 ${KRW(total)})을 납부현황 기준으로 정리했습니다.\n\n모든 가족 기기에 반영하려면 사이드바 "암호화 백업 내보내기" 후 GitHub에 다시 올리세요.`);
 }
 
 // ═══════════ MODAL ═══════════
