@@ -44,6 +44,15 @@ tbody tr:hover td{background:#f7f9fb;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .fade{animation:fadeUp .35s ease forwards;}
 .pcell{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;transition:.1s;}
+table.ss{border-collapse:collapse;}
+table.ss th{position:sticky;top:0;background:#f2f4f6;border:1px solid #e0e3e5;font-size:11px;font-weight:700;color:#424754;padding:4px 6px;min-width:96px;z-index:2;}
+table.ss tbody th{left:0;min-width:34px;text-align:center;z-index:1;}
+table.ss td{border:1px solid #e0e3e5;padding:0;}
+table.ss input{border:none;width:100%;min-width:96px;padding:6px 8px;font-size:13px;background:transparent;text-align:right;color:#191c1e;}
+table.ss input.formula{color:#0058be;font-weight:600;}
+table.ss input.txt{text-align:left;color:#424754;}
+table.ss input.editing{background:#eff6ff;text-align:left;}
+table.ss input:focus{outline:2px solid #0058be;outline-offset:-2px;}
 </style>
 </head>
 <body class="bg-background text-on-surface" style="min-height:100vh;">
@@ -72,6 +81,7 @@ tbody tr:hover td{background:#f7f9fb;}
     <div class="nav-item" data-page="payments" onclick="navigate('payments')"><span class="material-symbols-outlined">event_available</span>납부 현황</div>
     <div class="nav-item" data-page="finance" onclick="navigate('finance')"><span class="material-symbols-outlined">payments</span>재무</div>
     <div class="nav-item" data-page="messages" onclick="navigate('messages')"><span class="material-symbols-outlined">forum</span>안내 메시지</div>
+    <div class="nav-item" data-page="sheet" onclick="navigate('sheet')"><span class="material-symbols-outlined">calculate</span>계산기</div>
   </nav>
   <div class="mt-auto pt-4 border-t border-outline-variant">
     <div class="nav-item" onclick="exportEnc()" style="font-size:13px;"><span class="material-symbols-outlined" style="font-size:18px;">cloud_upload</span>암호화 백업 내보내기</div>
@@ -91,7 +101,7 @@ tbody tr:hover td{background:#f7f9fb;}
         <span class="material-symbols-outlined">notifications</span>
         <span id="nbadge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
       </button>
-      <button class="btn-p flex items-center gap-1" onclick="openAdd()" style="padding:7px 13px;"><span class="material-symbols-outlined" style="font-size:18px;">add</span><span id="fab">추가</span></button>
+      <button id="addbtn" class="btn-p flex items-center gap-1" onclick="openAdd()" style="padding:7px 13px;"><span class="material-symbols-outlined" style="font-size:18px;">add</span><span id="fab">추가</span></button>
     </div>
   </header>
 
@@ -185,6 +195,16 @@ tbody tr:hover td{background:#f7f9fb;}
     <div style="font-size:14px;color:#424754;">임차인에게 보낼 문자 문구를 저장해두고, <b>복사</b> 버튼으로 문자앱에 붙여넣어 사용하세요. <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">[호실]</code> <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">[임차인]</code> 처럼 적어두면 보낼 때 직접 바꿔 넣기 편합니다.</div>
     <div id="messages-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
   </div>
+
+  <!-- SHEET (계산기) -->
+  <div id="page-sheet" class="page p-5 md:p-6 space-y-4">
+    <div style="font-size:14px;color:#424754;">엑셀처럼 계산할 수 있습니다. 셀에 숫자나 <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">=B1/B2</code>, <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">=SUM(C5:C9)</code>, <code style="background:#eceef0;padding:1px 5px;border-radius:4px;">=268000000*0.05</code> 같은 수식을 넣으면 자동 계산됩니다. 지원: <b>+ − × ÷ ( )</b>, <b>SUM · AVERAGE · MIN · MAX · COUNT</b>. (아래는 신림동 수도요금 분배 예시 — 자유롭게 수정하세요)</div>
+    <div class="flex gap-2">
+      <button class="btn-s flex items-center gap-1" onclick="loadWaterTemplate()"><span class="material-symbols-outlined" style="font-size:16px;">water_drop</span>수도요금 분배 서식</button>
+      <button class="btn-s flex items-center gap-1" onclick="clearSheet()"><span class="material-symbols-outlined" style="font-size:16px;">backspace</span>전체 지우기</button>
+    </div>
+    <div id="sheet-grid" class="overflow-auto" style="max-height:70vh;border:1px solid #c2c6d6;border-radius:10px;"></div>
+  </div>
 </main>
 
 <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-bright border-t border-outline-variant flex items-center justify-around z-40">
@@ -193,6 +213,7 @@ tbody tr:hover td{background:#f7f9fb;}
   <button onclick="navigate('payments')" class="flex flex-col items-center gap-1 text-xs" id="mn-payments"><span class="material-symbols-outlined" style="font-size:22px;">event_available</span>납부</button>
   <button onclick="navigate('finance')" class="flex flex-col items-center gap-1 text-xs" id="mn-finance"><span class="material-symbols-outlined" style="font-size:22px;">payments</span>재무</button>
   <button onclick="navigate('messages')" class="flex flex-col items-center gap-1 text-xs" id="mn-messages"><span class="material-symbols-outlined" style="font-size:22px;">forum</span>메시지</button>
+  <button onclick="navigate('sheet')" class="flex flex-col items-center gap-1 text-xs" id="mn-sheet"><span class="material-symbols-outlined" style="font-size:22px;">calculate</span>계산기</button>
 </nav>
 
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
@@ -252,6 +273,7 @@ async function unlock(pw){
   DB=JSON.parse(new TextDecoder().decode(pt));
   KEY=key; SALT=salt;
   if(!Array.isArray(DB.messages)) DB.messages=defaultMessages(); // 안내 메시지 기본 템플릿
+  if(typeof DB.sheet!=='object'||DB.sheet===null||Array.isArray(DB.sheet)) DB.sheet=defaultSheet(); // 계산기 기본 서식
 }
 async function save(){
   if(!KEY) return;
@@ -282,10 +304,10 @@ function insBadge(ins){ if(ins==='미가입') return `<span class="badge" style=
 
 // ═══════════ NAV ═══════════
 let cur='dashboard';
-const titles={dashboard:'대시보드',units:'건물 · 호실',payments:'납부 현황',finance:'재무',messages:'입주민 안내 메시지'};
-const fabs={dashboard:'호실 추가',units:'호실 추가',payments:'호실 추가',finance:'거래 추가',messages:'메시지 추가'};
-function navigate(p){ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+p).classList.add('active'); const nv=document.querySelector(`[data-page="${p}"]`); if(nv)nv.classList.add('active'); document.getElementById('ptitle').textContent=titles[p]; document.getElementById('fab').textContent=fabs[p]; cur=p; ['dashboard','units','payments','finance','messages'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x===p?'#0058be':'#424754';}); renderPage(p); window.scrollTo(0,0); }
-function renderPage(p){ if(p==='dashboard')renderDashboard(); else if(p==='units')renderUnits(); else if(p==='payments')renderPayments(); else if(p==='finance')renderFinance(); else if(p==='messages')renderMessages(); }
+const titles={dashboard:'대시보드',units:'건물 · 호실',payments:'납부 현황',finance:'재무',messages:'입주민 안내 메시지',sheet:'계산기'};
+const fabs={dashboard:'호실 추가',units:'호실 추가',payments:'호실 추가',finance:'거래 추가',messages:'메시지 추가',sheet:''};
+function navigate(p){ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+p).classList.add('active'); const nv=document.querySelector(`[data-page="${p}"]`); if(nv)nv.classList.add('active'); document.getElementById('ptitle').textContent=titles[p]; document.getElementById('fab').textContent=fabs[p]; document.getElementById('addbtn').style.display=(p==='sheet')?'none':''; cur=p; ['dashboard','units','payments','finance','messages','sheet'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x===p?'#0058be':'#424754';}); renderPage(p); window.scrollTo(0,0); }
+function renderPage(p){ if(p==='dashboard')renderDashboard(); else if(p==='units')renderUnits(); else if(p==='payments')renderPayments(); else if(p==='finance')renderFinance(); else if(p==='messages')renderMessages(); else if(p==='sheet')renderSheet(); }
 function renderAll(){ populateFilters(); renderPage(cur); buildNotif(); }
 function toggleMenu(){ const s=document.getElementById('sidebar'); s.classList.toggle('hidden'); s.classList.toggle('flex'); }
 
@@ -541,6 +563,73 @@ function defaultMessages(){ return [
   {id:uuid(),title:'공용 공지 (점검/청소)',body:'안녕하세요, 입주민 여러분.\n그레이스하우스입니다.\n\n[일시] [내용] 안내드립니다.\n이용에 참고 부탁드립니다.\n\n감사합니다.'},
 ]; }
 
+// ═══════════ SHEET (엑셀식 계산기) ═══════════
+const SHEET_COLS='ABCDEFGH'.split(''); const SHEET_ROWS=30;
+function cellRefs(range){ const m=range.match(/^([A-H])(\d+):([A-H])(\d+)$/); if(!m)return[range];
+  const c1=m[1].charCodeAt(0),r1=+m[2],c2=m[3].charCodeAt(0),r2=+m[4],out=[];
+  for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)for(let r=Math.min(r1,r2);r<=Math.max(r1,r2);r++)out.push(String.fromCharCode(c)+r);
+  return out; }
+function evalCell(ref,raw,seen){
+  const v=(raw[ref]==null?'':raw[ref]).toString().trim();
+  if(v==='')return 0;
+  if(v[0]!=='='){ const n=parseFloat(v.replace(/,/g,'')); return isNaN(n)?0:n; }
+  if(seen.has(ref))return NaN; seen.add(ref);
+  let e=v.slice(1);
+  e=e.replace(/(SUM|AVERAGE|MIN|MAX|COUNT)\s*\(([^)]*)\)/gi,(mm,fn,args)=>{
+    let refs=[]; args.split(',').forEach(a=>{a=a.trim().toUpperCase(); if(/:/.test(a))refs=refs.concat(cellRefs(a)); else if(a)refs.push(a);});
+    const nums=refs.map(rf=>/^[A-H]\d+$/.test(rf)?evalCell(rf,raw,new Set(seen)):parseFloat(rf)).filter(n=>!isNaN(n));
+    fn=fn.toUpperCase(); let res=0;
+    if(fn==='SUM')res=nums.reduce((s,n)=>s+n,0);
+    else if(fn==='AVERAGE')res=nums.length?nums.reduce((s,n)=>s+n,0)/nums.length:0;
+    else if(fn==='MIN')res=nums.length?Math.min(...nums):0;
+    else if(fn==='MAX')res=nums.length?Math.max(...nums):0;
+    else if(fn==='COUNT')res=nums.length;
+    return '('+res+')';
+  });
+  e=e.replace(/[A-H]\d+/gi,rf=>'('+evalCell(rf.toUpperCase(),raw,new Set(seen))+')');
+  e=e.replace(/,/g,'').replace(/×/g,'*').replace(/÷/g,'/');
+  if(!/^[-+*/(). \d]+$/.test(e))return NaN;
+  try{ const r=Function('return ('+e+')')(); return typeof r==='number'?r:NaN; }catch(_){ return NaN; }
+}
+function fmtCell(n){ if(typeof n!=='number'||!isFinite(n))return '#오류'; return (Math.round(n*100)/100).toLocaleString('ko-KR'); }
+function renderSheet(){
+  const host=document.getElementById('sheet-grid');
+  if(!host.dataset.built){
+    let h='<table class="ss"><thead><tr><th></th>'+SHEET_COLS.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+    for(let r=1;r<=SHEET_ROWS;r++){ h+=`<tr><th>${r}</th>`+SHEET_COLS.map(c=>`<td><input data-ref="${c}${r}" spellcheck="false" autocomplete="off"/></td>`).join('')+'</tr>'; }
+    host.innerHTML=h+'</tbody></table>'; host.dataset.built='1';
+    host.querySelectorAll('input[data-ref]').forEach(inp=>{
+      inp.addEventListener('focus',()=>{ inp.value=(DB.sheet[inp.dataset.ref]||''); inp.className='editing'; });
+      inp.addEventListener('blur',()=>{ const ref=inp.dataset.ref,val=inp.value.trim(); if(val==='')delete DB.sheet[ref]; else DB.sheet[ref]=val; inp.className=''; save(); updateSheet(); });
+      inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault(); inp.blur();} });
+    });
+  }
+  updateSheet();
+}
+function updateSheet(){
+  document.querySelectorAll('#sheet-grid input[data-ref]').forEach(inp=>{
+    if(inp.classList.contains('editing'))return;
+    const raw=(DB.sheet[inp.dataset.ref]||'').toString();
+    if(raw===''){ inp.value=''; inp.className=''; return; }
+    if(raw[0]==='='){ inp.value=fmtCell(evalCell(inp.dataset.ref,DB.sheet,new Set())); inp.className='formula'; }
+    else if(isNaN(parseFloat(raw.replace(/,/g,'')))){ inp.value=raw; inp.className='txt'; }
+    else { inp.value=(+raw.replace(/,/g,'')).toLocaleString('ko-KR'); inp.className=''; }
+  });
+}
+function clearSheet(){ if(confirm('계산기 내용을 모두 지울까요?')){ DB.sheet={}; save(); updateSheet(); } }
+function loadWaterTemplate(){ if(!confirm('현재 계산기 내용을 수도요금 분배 서식으로 바꿉니다. 계속할까요?'))return; DB.sheet=defaultSheet(); save(); updateSheet(); }
+function defaultSheet(){ return {
+  'A1':'수도요금 총액(원)','B1':'',
+  'A2':'분담 세대수','B2':'5',
+  'A4':'호실','B4':'임차인','C4':'분담액(원)',
+  'A5':'101','B5':'김형배','C5':'=B1/B2',
+  'A6':'102','B6':'김경한','C6':'=B1/B2',
+  'A7':'201','B7':'인여울','C7':'=B1/B2',
+  'A8':'301','B8':'채현대','C8':'=B1/B2',
+  'A9':'옥탑','B9':'정광해','C9':'=B1/B2',
+  'A10':'합계','C10':'=SUM(C5:C9)'
+}; }
+
 // ═══════════ NOTIFICATIONS ═══════════
 function buildNotif(){ const items=[]; const cm=curMonth();
   DB.units.filter(u=>u.type!=='공실').forEach(u=>{ const d=daysUntil(u.end); if(d!==null&&d>=0&&d<=60)items.push({i:'event',c:'#ba1a1a',bg:'#ffdad6',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} (${u.tenant}) 계약 D-${d}일`}); if(u.ins==='미가입')items.push({i:'gpp_maybe',c:'#d97706',bg:'#fef3c7',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} 보증보험 미가입`}); if(u.rent>0&&!((DB.payments[u.id]||{})[cm]||{}).rent)items.push({i:'payments',c:'#b91c1c',bg:'#ffdad6',t:`${bName(u.bid).replace(' 그레이스하우스','')} ${u.unit} ${cm.slice(5)}월 임대료 미납`}); });
@@ -562,7 +651,7 @@ function exportCSV(type){ let rows=[],fn='';
 // ═══════════ INIT (잠금 해제 후 시작) ═══════════
 function startApp(){
   populateFilters(); renderDashboard(); buildNotif();
-  ['dashboard','units','payments','finance','messages'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x==='dashboard'?'#0058be':'#424754';});
+  ['dashboard','units','payments','finance','messages','sheet'].forEach(x=>{const b=document.getElementById('mn-'+x); if(b)b.style.color=x==='dashboard'?'#0058be':'#424754';});
 }
 async function doUnlock(){
   const pw=document.getElementById('lock-pw').value;
